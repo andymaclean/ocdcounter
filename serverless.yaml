@@ -1,0 +1,83 @@
+service: dynamocount
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: provided.al2
+  architecture: x86_64
+  memorySize: 128
+  timeout: 10
+  environment:
+    COUNTER_TABLE: 
+      Ref: counterTable
+  iam:
+    role:
+      name:  counterTableRWAccess
+      statements:
+        - Effect: Allow
+          Action:
+            - 'dynamodb:GetItem'
+            - 'dynamodb:UpdateItem'
+          Resource:
+            Fn::Join:	
+              - ''
+              - - 'arn:aws:dynamodb:*:*:table/'
+                - Ref: counterTable
+
+
+
+package:
+  patterns:
+    - '!*'
+    - 'bootstrap'
+
+functions:
+  increment:
+    handler: increment
+    events:
+      - httpApi:
+          method: GET
+          path: /increment
+  decrement:
+    handler: decrement
+    events:
+      - httpApi:
+          method: GET
+          path: /decrement
+  fetch:
+    handler: fetch
+    events:
+      - httpApi:
+          method: GET
+          path: /fetch
+  setStep:
+    handler: setstep
+    events:
+      - httpApi:
+          method: GET
+          path: /setStep/{stepVal}
+  reset:
+    handler: reset
+    events:
+      - httpApi:
+          method: GET
+          path: /reset
+
+
+
+resources:
+  Resources:
+    counterTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: name
+            AttributeType: S
+        KeySchema:
+          - AttributeName: name
+            KeyType:  HASH     
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+
