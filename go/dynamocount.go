@@ -4,26 +4,40 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 
 	"github.com/aws/aws-lambda-go/events"
+)
+
+const (
+	stepCol     = "stepVal"
+	counterCol  = "countVal"
+	stepInit    = "stepinit"
+	counterInit = "countinit"
 )
 
 type Response events.APIGatewayProxyResponse
 type Request events.APIGatewayProxyRequest
 
 type CountData struct {
-	CounterVal int `json:"counterVal"`
+	CounterVal int `json:"countVal"`
 	StepVal    int `json:"stepVal"`
 }
 
 type CountKey struct {
 	name string
+}
+
+type DBI interface {
+	// all of the calls we actually make to dynamo need to be here.  Yuck!
+	UpdateItem(input *dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error)
 }
 
 func makeerror(err error) (Response, error) {
@@ -54,8 +68,7 @@ func makeresponse(data any) (Response, error) {
 	return res, nil
 }
 
-func dynamocount_handler(ctx context.Context, req Request, query string, stepval string) (Response, error) {
-
+func dynamodb_iface() dynamodbiface.DynamoDBAPI {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
@@ -63,24 +76,34 @@ func dynamocount_handler(ctx context.Context, req Request, query string, stepval
 	//Create DynamoDB client
 	svc := dynamodb.New(sess)
 
+	return dynamodbiface.DynamoDBAPI(svc)
+}
+
+func dynamocount_handler(dbi DBI, counter string, create bool, query string, stepval string) (Response, error) {
 	udr := dynamodb.UpdateItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			"name": {S: aws.String("defaultcount")}},
+			"name": {S: aws.String(counter)}},
 		ReturnValues: aws.String("ALL_NEW"),
 		TableName:    aws.String(os.Getenv("COUNTER_TABLE")),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":stepinit":  {N: aws.String(stepval)},
-			":countinit": {N: aws.String("0")}},
+			":" + stepInit:    {N: aws.String(stepval)},
+			":" + counterInit: {N: aws.String("0")}},
 		UpdateExpression: aws.String(query),
 	}
 
-	udo, uderr := svc.UpdateItem(&udr)
+	//log.Print("Update Query: ", query)
+
+	if !create { // if we can't create a record, force 'name' to already be there
+		udr.SetConditionExpression("attribute_exists(name)")
+	}
+
+	udo, uderr := dbi.UpdateItem(&udr)
 
 	if uderr != nil {
 		return makeerror(uderr)
 	}
 
-	counts := CountData{3, 4}
+	counts := CountData{}
 
 	umerr := dynamodbattribute.UnmarshalMap(udo.Attributes, &counts)
 
@@ -91,22 +114,69 @@ func dynamocount_handler(ctx context.Context, req Request, query string, stepval
 	return makeresponse(&counts)
 }
 
+const (
+	dq_init    = iota
+	dq_current = iota
+	dq_inc     = iota
+	dq_dec     = iota
+)
+
+func dnquery(stepmode int, countermode int) string {
+
+	colexpr := func(mode int,
+		colName string, defaultName string) string {
+		switch mode {
+		case dq_init:
+			return fmt.Sprintf(":%s", defaultName)
+		case dq_current:
+			return fmt.Sprintf("if_not_exists(%s,:%s)", colName, defaultName)
+		}
+		return ""
+	}
+
+	xcolexpr := func(mode int,
+		colName string, defaultName string,
+		stepmode int,
+		stepName string, stepDefault string) string {
+		switch mode {
+		case dq_inc:
+			return fmt.Sprintf("%s + %s",
+				colexpr(dq_current, colName, defaultName),
+				colexpr(stepmode, stepName, stepDefault),
+			)
+		case dq_dec:
+			return fmt.Sprintf("%s - %s",
+				colexpr(dq_current, colName, defaultName),
+				colexpr(stepmode, stepName, stepDefault),
+			)
+		}
+		return colexpr(mode, colName, defaultName)
+	}
+
+	return fmt.Sprintf("SET %s=%s,%s=%s",
+		stepCol,
+		colexpr(stepmode, stepCol, stepInit),
+		counterCol,
+		xcolexpr(countermode, counterCol, counterInit, stepmode, stepCol, stepInit),
+	)
+}
+
 func dynamocount_increment(ctx context.Context, req Request) (Response, error) {
-	return dynamocount_handler(ctx, req, "SET stepVal=if_not_exists(stepVal,:stepinit), counterVal=if_not_exists(counterVal,:countinit) + if_not_exists(stepVal,:stepinit)", "1")
+	return dynamocount_handler(dynamodb_iface(), "default", true, dnquery(dq_current, dq_inc), "1")
 }
 
 func dynamocount_decrement(ctx context.Context, req Request) (Response, error) {
-	return dynamocount_handler(ctx, req, "SET stepVal=if_not_exists(stepVal,:stepinit), counterVal=if_not_exists(counterVal,:countinit) - if_not_exists(stepVal,:stepinit)", "1")
+	return dynamocount_handler(dynamodb_iface(), "default", true, dnquery(dq_current, dq_dec), "1")
 }
 
 func dynamocount_fetch(ctx context.Context, req Request) (Response, error) {
-	return dynamocount_handler(ctx, req, "SET stepVal=if_not_exists(stepVal,:stepinit), counterVal=if_not_exists(counterVal,:countinit)", "1")
+	return dynamocount_handler(dynamodb_iface(), "default", true, dnquery(dq_current, dq_current), "1")
 }
 
 func dynamocount_setstep(ctx context.Context, req Request) (Response, error) {
-	return dynamocount_handler(ctx, req, "SET stepVal=:stepinit, counterVal=if_not_exists(counterVal,:countinit)", req.PathParameters["stepVal"])
+	return dynamocount_handler(dynamodb_iface(), "default", true, dnquery(dq_init, dq_current), req.PathParameters["stepVal"])
 }
 
 func dynamocount_reset(ctx context.Context, req Request) (Response, error) {
-	return dynamocount_handler(ctx, req, "SET stepVal=:stepinit, counterVal=:countinit", "1")
+	return dynamocount_handler(dynamodb_iface(), "default", true, dnquery(dq_current, dq_init), "1")
 }

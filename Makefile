@@ -7,3 +7,4 @@ bootstrap: go/*.go
 clean:
 	sls remove
 	rm -f bootstrap
+	
