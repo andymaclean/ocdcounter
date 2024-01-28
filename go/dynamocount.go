@@ -80,12 +80,12 @@ func dynamodb_iface() dynamodbiface.DynamoDBAPI {
 	return dynamodbiface.DynamoDBAPI(svc)
 }
 
-func dynamocount_handler(dbi DBI, counter string, create bool, query string, stepval string) (Response, error) {
+func dynamocount_handler(dbi DBI, table string, counter string, create bool, query string, stepval string) (Response, error) {
 	udr := dynamodb.UpdateItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			counterNameCol: {S: aws.String(counter)}},
 		ReturnValues: aws.String("ALL_NEW"),
-		TableName:    aws.String(os.Getenv("COUNTER_TABLE")),
+		TableName:    aws.String(table),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 			":" + stepInit:    {N: aws.String(stepval)},
 			":" + counterInit: {N: aws.String("0")}},
@@ -163,21 +163,21 @@ func dnquery(stepmode int, countermode int) string {
 }
 
 func dynamocount_increment(ctx context.Context, req Request) (Response, error) {
-	return dynamocount_handler(dynamodb_iface(), "default", true, dnquery(dq_current, dq_inc), "1")
+	return dynamocount_handler(dynamodb_iface(), os.Getenv("COUNTER_TABLE"), "default", true, dnquery(dq_current, dq_inc), "1")
 }
 
 func dynamocount_decrement(ctx context.Context, req Request) (Response, error) {
-	return dynamocount_handler(dynamodb_iface(), "default", true, dnquery(dq_current, dq_dec), "1")
+	return dynamocount_handler(dynamodb_iface(), os.Getenv("COUNTER_TABLE"), "default", true, dnquery(dq_current, dq_dec), "1")
 }
 
 func dynamocount_fetch(ctx context.Context, req Request) (Response, error) {
-	return dynamocount_handler(dynamodb_iface(), "default", true, dnquery(dq_current, dq_current), "1")
+	return dynamocount_handler(dynamodb_iface(), os.Getenv("COUNTER_TABLE"), "default", true, dnquery(dq_current, dq_current), "1")
 }
 
 func dynamocount_setstep(ctx context.Context, req Request) (Response, error) {
-	return dynamocount_handler(dynamodb_iface(), "default", true, dnquery(dq_init, dq_current), req.PathParameters["stepVal"])
+	return dynamocount_handler(dynamodb_iface(), os.Getenv("COUNTER_TABLE"), "default", true, dnquery(dq_init, dq_current), req.PathParameters["stepVal"])
 }
 
 func dynamocount_reset(ctx context.Context, req Request) (Response, error) {
-	return dynamocount_handler(dynamodb_iface(), "default", true, dnquery(dq_current, dq_init), "1")
+	return dynamocount_handler(dynamodb_iface(), os.Getenv("COUNTER_TABLE"), "default", true, dnquery(dq_current, dq_init), "1")
 }

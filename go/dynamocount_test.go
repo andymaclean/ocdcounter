@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -47,16 +46,11 @@ func TestDnquery_dec(t *testing.T) {
 type updatefunc func(*dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error)
 
 type mockDBI struct {
-	t           *testing.T
-	udf         updatefunc
-	countername string
+	t   *testing.T
+	udf updatefunc
 }
 
 func (m mockDBI) UpdateItem(input *dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error) {
-	cn := input.Key["name"].S
-	if m.countername != *cn {
-		return nil, errors.New(fmt.Sprintf("Incorrect counter name %s not %s", *cn, m.countername))
-	}
 	return m.udf(input)
 }
 
@@ -84,18 +78,36 @@ func checkResponseValues(t *testing.T, res Response, expectCount int, expectStep
 	}
 }
 
+const (
+	expTable = "CounterTable"
+	expKey   = "testCounter"
+)
+
+func check_ddbi(t *testing.T, input *dynamodb.UpdateItemInput) {
+	if *input.TableName != expTable {
+		t.Errorf("Table name is %s not %s", *input.TableName, expTable)
+	}
+
+	kval := *input.Key[counterNameCol].S
+
+	if kval != expKey {
+		t.Errorf("Key name is %s not %s", kval, expKey)
+	}
+}
+
 func TestHandlerNoCreate(t *testing.T) {
 	dbi := mockDBI{
-		t:           t,
-		countername: "test",
+		t: t,
 		udf: func(input *dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error) {
+			check_ddbi(t, input)
+
 			if input.ConditionExpression == nil {
 				t.Fatal("Nil conditional expression.")
 			}
 
 			return &dynamodb.UpdateItemOutput{}, errors.New("this failed")
 		}}
-	res, err := dynamocount_handler(dbi, "test", false, dnquery(dq_init, dq_init), "50")
+	res, err := dynamocount_handler(dbi, expTable, expKey, false, dnquery(dq_init, dq_init), "50")
 
 	checkResponseCode(t, res, 404)
 
@@ -106,9 +118,10 @@ func TestHandlerNoCreate(t *testing.T) {
 
 func TestHandlerCreate(t *testing.T) {
 	dbi := mockDBI{
-		t:           t,
-		countername: "test",
+		t: t,
 		udf: func(input *dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error) {
+			check_ddbi(t, input)
+
 			if input.ConditionExpression != nil {
 				t.Fatal("Non nil conditional expression: ", *input.ConditionExpression)
 			}
@@ -121,7 +134,7 @@ func TestHandlerCreate(t *testing.T) {
 			}, nil
 		}}
 
-	res, err := dynamocount_handler(dbi, "test", true, dnquery(dq_init, dq_init), "50")
+	res, err := dynamocount_handler(dbi, expTable, expKey, true, dnquery(dq_init, dq_init), "50")
 
 	checkResponseCode(t, res, 200)
 
