@@ -17,14 +17,15 @@ import (
 )
 
 const (
-	stepCol     = "stepVal"
-	counterCol  = "countVal"
-	stepInit    = "stepinit"
-	counterInit = "countinit"
+	stepCol        = "stepVal"
+	counterCol     = "countVal"
+	stepInit       = "stepinit"
+	counterInit    = "countinit"
+	counterNameCol = "counterName"
 )
 
-type Response events.APIGatewayProxyResponse
-type Request events.APIGatewayProxyRequest
+type Response = events.APIGatewayProxyResponse
+type Request = events.APIGatewayProxyRequest
 
 type CountData struct {
 	CounterVal int `json:"countVal"`
@@ -32,7 +33,7 @@ type CountData struct {
 }
 
 type CountKey struct {
-	name string
+	name string `json:"counterName"`
 }
 
 type DBI interface {
@@ -82,7 +83,7 @@ func dynamodb_iface() dynamodbiface.DynamoDBAPI {
 func dynamocount_handler(dbi DBI, counter string, create bool, query string, stepval string) (Response, error) {
 	udr := dynamodb.UpdateItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			"name": {S: aws.String(counter)}},
+			counterNameCol: {S: aws.String(counter)}},
 		ReturnValues: aws.String("ALL_NEW"),
 		TableName:    aws.String(os.Getenv("COUNTER_TABLE")),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
@@ -94,7 +95,7 @@ func dynamocount_handler(dbi DBI, counter string, create bool, query string, ste
 	//log.Print("Update Query: ", query)
 
 	if !create { // if we can't create a record, force 'name' to already be there
-		udr.SetConditionExpression("attribute_exists(name)")
+		udr.SetConditionExpression("attribute_exists(" + counterNameCol + ")")
 	}
 
 	udo, uderr := dbi.UpdateItem(&udr)

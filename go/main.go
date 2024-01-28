@@ -24,8 +24,9 @@ func main() {
 		lambda.Start(dynamocount_setstep)
 	case "reset":
 		lambda.Start(dynamocount_reset)
+	case "apiv1":
+		api_v1() // This init routine has a lambda router and will call lambda.Start itself
 	default:
 		lambda.Start(unknownHandler)
 	}
-
 }

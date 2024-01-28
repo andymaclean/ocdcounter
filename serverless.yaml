@@ -7,6 +7,9 @@ provider:
   architecture: x86_64
   memorySize: 128
   timeout: 10
+  httpApi:
+    payload: "1.0"
+
   environment:
     COUNTER_TABLE: 
       Ref: counterTable
@@ -18,6 +21,7 @@ provider:
           Action:
             - 'dynamodb:GetItem'
             - 'dynamodb:UpdateItem'
+            - 'dynamodb:Scan'
           Resource:
             Fn::Join:	
               - ''
@@ -62,7 +66,18 @@ functions:
       - httpApi:
           method: GET
           path: /reset
-
+  apiv1:
+    handler: apiv1
+    events:
+      - httpApi:
+          method: GET
+          path: /api/v1/{Path+}
+  apiv1post:
+    handler: apiv1
+    events:
+      - httpApi:
+          method: POST
+          path: /api/v1/{Path+}
 
 
 resources:
@@ -71,10 +86,10 @@ resources:
       Type: AWS::DynamoDB::Table
       Properties:
         AttributeDefinitions:
-          - AttributeName: name
+          - AttributeName: counterName
             AttributeType: S
         KeySchema:
-          - AttributeName: name
+          - AttributeName: counterName
             KeyType:  HASH     
         ProvisionedThroughput:
           ReadCapacityUnits: 1
