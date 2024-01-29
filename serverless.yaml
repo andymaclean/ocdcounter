@@ -22,6 +22,7 @@ provider:
             - 'dynamodb:GetItem'
             - 'dynamodb:UpdateItem'
             - 'dynamodb:Scan'
+            - 'dynamodb:DeleteItem'
           Resource:
             Fn::Join:	
               - ''
@@ -36,47 +37,11 @@ package:
     - 'bootstrap'
 
 functions:
-  increment:
-    handler: increment
-    events:
-      - httpApi:
-          method: GET
-          path: /increment
-  decrement:
-    handler: decrement
-    events:
-      - httpApi:
-          method: GET
-          path: /decrement
-  fetch:
-    handler: fetch
-    events:
-      - httpApi:
-          method: GET
-          path: /fetch
-  setStep:
-    handler: setstep
-    events:
-      - httpApi:
-          method: GET
-          path: /setStep/{stepVal}
-  reset:
-    handler: reset
-    events:
-      - httpApi:
-          method: GET
-          path: /reset
   apiv1:
     handler: apiv1
     events:
       - httpApi:
-          method: GET
-          path: /api/v1/{Path+}
-  apiv1post:
-    handler: apiv1
-    events:
-      - httpApi:
-          method: POST
+          method: '*'
           path: /api/v1/{Path+}
 
 

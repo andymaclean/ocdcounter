@@ -1,0 +1,159 @@
+name: Counter API end to end tests
+vars: 
+  httpstem: https://5nhtenar3l.execute-api.us-east-1.amazonaws.com/api/v1/counter
+  counter: e2etest
+  expr: '{"counterName":"e2etest"}'
+
+testcases:
+- name: Create a counter
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/{{.counter}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+
+- name: List Counters
+  steps:
+  - type: http
+    method: GET
+    url: {{.httpstem}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+
+- name: Reset a counter
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/{{.counter}}/reset
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countval ShouldEqual 0
+
+- name: Set Step Value
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/{{.counter}}/step?stepVal=1
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countval ShouldEqual 0
+    - result.bodyjson.stepval ShouldEqual 1
+
+
+- name: Increment a counter
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/{{.counter}}/increment
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countval ShouldEqual 1
+    - result.bodyjson.stepval ShouldEqual 1
+
+
+- name: Decrement a counter
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/{{.counter}}/decrement
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countval ShouldEqual 0
+    - result.bodyjson.stepval ShouldEqual 1
+
+- name: Set Step Value
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/{{.counter}}/step?stepVal=50
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countval ShouldEqual 0
+    - result.bodyjson.stepval ShouldEqual 50
+
+- name: Increment a counter
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/{{.counter}}/increment
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countval ShouldEqual 50
+    - result.bodyjson.stepval ShouldEqual 50
+
+- name: Set Step Value
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/{{.counter}}/step?stepVal=21
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countval ShouldEqual 50
+    - result.bodyjson.stepval ShouldEqual 21
+
+- name: Decrement a counter
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/{{.counter}}/decrement
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countval ShouldEqual 29
+    - result.bodyjson.stepval ShouldEqual 21
+
+- name: Fetch a counter
+  steps:
+  - type: http
+    method: GET
+    url: {{.httpstem}}/{{.counter}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countval ShouldEqual 29
+    - result.bodyjson.stepval ShouldEqual 21
+
+- name: Reset a counter again
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/{{.counter}}/reset
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countval ShouldEqual 0
+    - result.bodyjson.stepval ShouldEqual 21
+
+- name: Fetch a counter
+  steps:
+  - type: http
+    method: GET
+    url: {{.httpstem}}/{{.counter}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countval ShouldEqual 0
+    - result.bodyjson.stepval ShouldEqual 21
+
+- name: Delete a counter
+  steps:
+  - type: http
+    method: DELETE
+    url: {{.httpstem}}/{{.counter}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+
+- name: Fetch a deleted counter fails
+  steps:
+  - type: http
+    method: GET
+    url: {{.httpstem}}/{{.counter}}
+    assertions:
+    - result.statuscode ShouldNotEqual 200
+
+- name: List Counters after delete
+  steps:
+  - type: http
+    method: GET
+    url: {{.httpstem}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+
+

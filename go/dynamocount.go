@@ -2,10 +2,8 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -160,24 +158,4 @@ func dnquery(stepmode int, countermode int) string {
 		counterCol,
 		xcolexpr(countermode, counterCol, counterInit, stepmode, stepCol, stepInit),
 	)
-}
-
-func dynamocount_increment(ctx context.Context, req Request) (Response, error) {
-	return dynamocount_handler(dynamodb_iface(), os.Getenv("COUNTER_TABLE"), "default", true, dnquery(dq_current, dq_inc), "1")
-}
-
-func dynamocount_decrement(ctx context.Context, req Request) (Response, error) {
-	return dynamocount_handler(dynamodb_iface(), os.Getenv("COUNTER_TABLE"), "default", true, dnquery(dq_current, dq_dec), "1")
-}
-
-func dynamocount_fetch(ctx context.Context, req Request) (Response, error) {
-	return dynamocount_handler(dynamodb_iface(), os.Getenv("COUNTER_TABLE"), "default", true, dnquery(dq_current, dq_current), "1")
-}
-
-func dynamocount_setstep(ctx context.Context, req Request) (Response, error) {
-	return dynamocount_handler(dynamodb_iface(), os.Getenv("COUNTER_TABLE"), "default", true, dnquery(dq_init, dq_current), req.PathParameters["stepVal"])
-}
-
-func dynamocount_reset(ctx context.Context, req Request) (Response, error) {
-	return dynamocount_handler(dynamodb_iface(), os.Getenv("COUNTER_TABLE"), "default", true, dnquery(dq_current, dq_init), "1")
 }
