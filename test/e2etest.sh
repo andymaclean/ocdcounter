@@ -27,5 +27,10 @@ if [[ -z "$token" || "$token" == "null" ]] ; then
     exit 22
 fi      
 
+echo "Loop"
+curl -H "Authorization: $token" ${stem}/loop 
+
+echo
+echo "Tests"
 venom run --var httpstem=${stem}/api/v1/counter --var token="$token" --output-dir out test/counter-api.test.yaml
 

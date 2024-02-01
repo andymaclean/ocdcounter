@@ -61,6 +61,14 @@ functions:
       - httpApi:
           method: GET
           path: /login
+  loop:
+    handler: loop
+    events:
+      - httpApi:
+          method: GET
+          path: /loop
+          authorizer:
+            name: APIAUTH
   apiv1:
     handler: apiv1
     events:

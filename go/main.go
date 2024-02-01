@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"os"
 
@@ -9,6 +10,10 @@ import (
 
 func unknownHandler() error {
 	return errors.New("UNKNOWN HANDLER")
+}
+
+func loop(ctx context.Context, req Request) (Response, error) {
+	return makeresponse(req)
 }
 
 func main() {
@@ -20,6 +25,8 @@ func main() {
 		lambda.Start(signup)
 	case "login":
 		lambda.Start(login)
+	case "loop":
+		lambda.Start(loop)
 	default:
 		lambda.Start(unknownHandler)
 	}
