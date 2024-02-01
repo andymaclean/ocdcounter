@@ -9,10 +9,20 @@ provider:
   timeout: 10
   httpApi:
     payload: "1.0"
-
+    authorizers:
+      APIAUTH:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: !GetAtt UserPool.ProviderURL
+        audience:
+          - Ref: UserPoolClient
   environment:
     COUNTER_TABLE: 
       Ref: counterTable
+    USER_POOL:
+      Ref: UserPool
+    USER_POOL_CLIENT:
+      Ref: UserPoolClient
   iam:
     role:
       name:  counterTableRWAccess
@@ -23,12 +33,14 @@ provider:
             - 'dynamodb:UpdateItem'
             - 'dynamodb:Scan'
             - 'dynamodb:DeleteItem'
-          Resource:
-            Fn::Join:	
-              - ''
-              - - 'arn:aws:dynamodb:*:*:table/'
-                - Ref: counterTable
+          Resource: !GetAtt counterTable.Arn
 
+        - Effect: Allow
+          Action:
+            - 'cognito-idp:AdminCreateUser'
+            - 'cognito-idp:AdminInitiateAuth'
+            - 'cognito-idp:AdminSetUserPassword'
+          Resource: !GetAtt UserPool.Arn
 
 
 package:
@@ -37,12 +49,27 @@ package:
     - 'bootstrap'
 
 functions:
+  signup:
+    handler: signup
+    events:
+      - httpApi:
+          method: GET
+          path: /signup
+  login:
+    handler: login
+    events:
+      - httpApi:
+          method: GET
+          path: /login
   apiv1:
     handler: apiv1
     events:
       - httpApi:
           method: '*'
           path: /api/v1/{Path+}
+          authorizer:
+            name: APIAUTH
+
 
 
 resources:
@@ -59,5 +86,37 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+    UserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: serverless-auth-pool
+        Schema:
+          - Name: email
+            Required: true
+            Mutable: true
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 6
+        AutoVerifiedAttributes: ["email"]
 
+    UserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: user-pool-ui
+        GenerateSecret: false
+        UserPoolId: { Ref: UserPool }
+        AccessTokenValidity: 5
+        IdTokenValidity: 5
+        ExplicitAuthFlows:
+          - "ADMIN_NO_SRP_AUTH"
 
+    UserPoolDomain:
+      Type: AWS::Cognito::UserPoolDomain
+      Properties:
+        UserPoolId: 
+          Ref: UserPool
+        Domain: 
+          Fn::Join:
+            - '-'
+            - - Ref: HttpApi
+              - Ref: UserPoolClient
