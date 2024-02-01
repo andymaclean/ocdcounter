@@ -1,6 +1,8 @@
+
+all: test deploy
+
 test: deploy
-	mkdir -p out
-	venom run --output-dir out counter-api.test.yaml
+	./test/e2etest.sh
 
 deploy: bootstrap serverless.yaml
 	sls deploy
