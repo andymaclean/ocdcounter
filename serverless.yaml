@@ -19,6 +19,8 @@ provider:
   environment:
     COUNTER_TABLE: 
       Ref: counterTable
+    GROUP_TABLE: 
+      Ref: groupTable
     USER_POOL:
       Ref: UserPool
     USER_POOL_CLIENT:
@@ -30,10 +32,13 @@ provider:
         - Effect: Allow
           Action:
             - 'dynamodb:GetItem'
+            - 'dynamodb:PutItem'
             - 'dynamodb:UpdateItem'
             - 'dynamodb:Scan'
             - 'dynamodb:DeleteItem'
-          Resource: !GetAtt counterTable.Arn
+          Resource: 
+            - !GetAtt counterTable.Arn
+            - !GetAtt groupTable.Arn
 
         - Effect: Allow
           Action:
@@ -86,14 +91,29 @@ resources:
       Type: AWS::DynamoDB::Table
       Properties:
         AttributeDefinitions:
-          - AttributeName: counterName
+          - AttributeName: counterUUID
             AttributeType: S
         KeySchema:
-          - AttributeName: counterName
+          - AttributeName: counterUUID
             KeyType:  HASH     
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+
+    groupTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: groupUUID
+            AttributeType: S
+        KeySchema:
+          - AttributeName: groupUUID
+            KeyType:  HASH     
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+
     UserPool:
       Type: AWS::Cognito::UserPool
       Properties:

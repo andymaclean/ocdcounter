@@ -30,7 +30,17 @@ fi
 echo "Loop"
 curl -H "Authorization: $token" ${stem}/loop 
 
+l=`curl -X POST -H "Authorization: $token" ${stem}/api/v1/group/testgroup 2>/dev/null`
+
+echo $l
+
+groupid=`echo $l | jq -r .Id`
+
+httpstem=${stem}/api/v1/group/$groupid/counter
+
+echo "HTTP stem:  ${httpstem}"
+
 echo
 echo "Tests"
-venom run --var httpstem=${stem}/api/v1/counter --var token="$token" --output-dir out test/counter-api.test.yaml
+venom run --var httpstem=${httpstem} --var token="$token" --output-dir out test/counter-api.test.yaml
 

@@ -6,37 +6,36 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 
 	"github.com/aws/aws-lambda-go/events"
 )
 
 const (
-	stepCol        = "stepVal"
-	counterCol     = "countVal"
-	stepInit       = "stepinit"
-	counterInit    = "countinit"
-	counterNameCol = "counterName"
+	stepCol         = "stepVal"
+	counterCol      = "countVal"
+	stepInit        = "stepinit"
+	groupId         = "groupId"
+	counterInit     = "countinit"
+	counterNameCol  = "counterName"
+	counterIdCol    = "counterUUID"
+	counterGroupCol = "counterGroupUUID"
+	groupIdCol      = "groupUUID"
+	deleteMarkerCol = "deleteMarker"
+	groupNameCol    = "groupName"
+	counterListCol  = "counters"
 )
 
 type Response = events.APIGatewayProxyResponse
 type Request = events.APIGatewayProxyRequest
 
 type CountData struct {
-	CounterVal int `json:"countVal"`
-	StepVal    int `json:"stepVal"`
-}
-
-type CountKey struct {
-	name string `json:"counterName"`
-}
-
-type DBI interface {
-	// all of the calls we actually make to dynamo need to be here.  Yuck!
-	UpdateItem(input *dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error)
+	CounterId    string `json:"counterUUID"`
+	CounterName  string `json:"counterName"`
+	CounterGroup string `json:"counterGroupUUID"`
+	CounterVal   int    `json:"countVal"`
+	StepVal      int    `json:"stepVal"`
 }
 
 func makeerror(err error) (Response, error) {
@@ -67,50 +66,70 @@ func makeresponse(data any) (Response, error) {
 	return res, nil
 }
 
-func dynamodb_iface() dynamodbiface.DynamoDBAPI {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
+func counter_create(ops []*dynamodb.TransactWriteItem, table string, counterUUID UUID, counterName string, group UUID) ([]*dynamodb.TransactWriteItem, error) {
+	record, rerr := dynamodbattribute.MarshalMap(CountData{
+		CounterId:    counterUUID.String(),
+		CounterName:  counterName,
+		CounterGroup: group.String(),
+		CounterVal:   0,
+		StepVal:      1,
+	})
 
-	//Create DynamoDB client
-	svc := dynamodb.New(sess)
+	if rerr != nil {
+		return ops, rerr
+	}
 
-	return dynamodbiface.DynamoDBAPI(svc)
+	input := dynamodb.Put{
+		TableName: aws.String(table),
+		Item:      record,
+	}
+
+	ops = append(ops, &dynamodb.TransactWriteItem{
+		Put: &input,
+	})
+
+	return ops, nil
 }
 
-func dynamocount_handler(dbi DBI, table string, counter string, create bool, query string, stepval string) (Response, error) {
-	udr := dynamodb.UpdateItemInput{
+func counter_update(ops []*dynamodb.TransactWriteItem, table string, group UUID, counterId UUID, query string, stepval int) ([]*dynamodb.TransactWriteItem, error) {
+	udr := dynamodb.Update{
 		Key: map[string]*dynamodb.AttributeValue{
-			counterNameCol: {S: aws.String(counter)}},
-		ReturnValues: aws.String("ALL_NEW"),
-		TableName:    aws.String(table),
+			counterIdCol: {S: aws.String(counterId.String())}},
+		TableName: aws.String(table),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":" + stepInit:    {N: aws.String(stepval)},
-			":" + counterInit: {N: aws.String("0")}},
-		UpdateExpression: aws.String(query),
+			":" + stepInit:    {N: aws.String(fmt.Sprintf("%d", stepval))},
+			":" + counterInit: {N: aws.String("0")},
+			":" + groupId:     {S: aws.String(group.String())},
+		},
+		UpdateExpression:    aws.String(query),
+		ConditionExpression: aws.String(fmt.Sprintf("attribute_exists(%s) and %s = :%s", counterIdCol, counterGroupCol, groupId)),
 	}
 
 	//log.Print("Update Query: ", query)
+	ops = append(ops, &dynamodb.TransactWriteItem{
+		Update: &udr,
+	})
 
-	if !create { // if we can't create a record, force 'name' to already be there
-		udr.SetConditionExpression("attribute_exists(" + counterNameCol + ")")
+	return ops, nil
+}
+
+func counter_delete(ops []*dynamodb.TransactWriteItem, table string, group UUID, counterId UUID) ([]*dynamodb.TransactWriteItem, error) {
+	dr := dynamodb.Delete{
+		Key: map[string]*dynamodb.AttributeValue{
+			counterIdCol: {S: aws.String(counterId.String())},
+		},
+		TableName: aws.String(table),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":" + groupId: {S: aws.String(group.String())},
+		},
+		ConditionExpression: aws.String(fmt.Sprintf("%s = :%s", counterGroupCol, groupId)),
 	}
 
-	udo, uderr := dbi.UpdateItem(&udr)
+	ops = append(ops, &dynamodb.TransactWriteItem{
+		Delete: &dr,
+	})
 
-	if uderr != nil {
-		return makeerror(uderr)
-	}
-
-	counts := CountData{}
-
-	umerr := dynamodbattribute.UnmarshalMap(udo.Attributes, &counts)
-
-	if umerr != nil {
-		return makeerror(umerr)
-	}
-
-	return makeresponse(&counts)
+	return ops, nil
 }
 
 const (
