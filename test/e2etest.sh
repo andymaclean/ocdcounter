@@ -1,5 +1,7 @@
 #!/bin/bash
 
+venom=~/builds/venom-1.1.0/dist/venom.linux-amd64
+
 mkdir -p out
 
 email="foo@example.com"
@@ -30,17 +32,11 @@ fi
 echo "Loop"
 curl -H "Authorization: $token" ${stem}/loop 
 
-l=`curl -X POST -H "Authorization: $token" ${stem}/api/v1/group/testgroup 2>/dev/null`
-
-echo $l
-
-groupid=`echo $l | jq -r .Id`
-
-httpstem=${stem}/api/v1/group/$groupid/counter
+httpstem=${stem}
 
 echo "HTTP stem:  ${httpstem}"
 
 echo
 echo "Tests"
-venom run --var httpstem=${httpstem} --var token="$token" --output-dir out test/counter-api.test.yaml
+${venom} run --var email=${email} --var password=${password} --var httpstem=${httpstem} --var token="$token" --output-dir out test/counter-api.test.yaml
 

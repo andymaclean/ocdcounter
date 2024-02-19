@@ -1,8 +1,12 @@
 package main
 
 import (
+	"fmt"
+
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 )
 
@@ -14,6 +18,7 @@ type opResult struct {
 
 type committer interface {
 	commit(ops []*dynamodb.TransactWriteItem, id UUID) (Response, error)
+	GetItem(*dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error)
 }
 
 type dynamoCommitter struct {
@@ -45,7 +50,60 @@ func (ci dynamoCommitter) commit(ops []*dynamodb.TransactWriteItem, id UUID) (Re
 	return makeresponse(opResult{Success: true, Result: "OK", Id: id.String()})
 }
 
-func dynamodb_counter_operate(ci committer, counterTableName string, group UUID, id UUID, query string, stepVal int) (Response, error) {
+func (ci dynamoCommitter) GetItem(in *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+	return ci.dbi.GetItem(in)
+}
+
+func dynamodb_read_counter(ci committer, counterTable *string, groupId UUID, counterId UUID) (Response, error) {
+	out, err := ci.GetItem(&dynamodb.GetItemInput{
+		Key: map[string]*dynamodb.AttributeValue{
+			counterIdCol: {S: aws.String(counterId.String())},
+		},
+		TableName: counterTable,
+	})
+	if err != nil {
+		return makeerror(err)
+	}
+
+	var cd CountData
+
+	cderr := dynamodbattribute.UnmarshalMap(out.Item, &cd)
+
+	if cderr != nil {
+		return makeerror(cderr)
+	}
+
+	if cd.CounterGroup != groupId.String() {
+		return makeerror(fmt.Errorf("counter group is %s not %s", cd.CounterGroup, groupId.String()))
+	}
+
+	return makeresponse(cd)
+}
+
+func dynamodb_counter_list(ci committer, groupTableName *string, groupId UUID) (Response, error) {
+	out, err := ci.GetItem(&dynamodb.GetItemInput{
+		Key: map[string]*dynamodb.AttributeValue{
+			groupIdCol: {S: aws.String(groupId.String())},
+		},
+		TableName: groupTableName,
+	})
+
+	if err != nil {
+		return makeerror(err)
+	}
+
+	var gd GroupData
+
+	gderr := dynamodbattribute.UnmarshalMap(out.Item, &gd)
+
+	if gderr != nil {
+		return makeerror(gderr)
+	}
+
+	return makeresponse(map[string][]string{"Counters": gd.Counters})
+}
+
+func dynamodb_counter_operate(ci committer, counterTableName *string, group UUID, id UUID, query string, stepVal int) (Response, error) {
 	var ops []*dynamodb.TransactWriteItem
 	var err error
 
@@ -58,7 +116,7 @@ func dynamodb_counter_operate(ci committer, counterTableName string, group UUID,
 	return ci.commit(ops, id)
 }
 
-func dynamodb_counter_create(ci committer, groupTableName string, counterTableName string, name string, group UUID) (Response, error) {
+func dynamodb_counter_create(ci committer, groupTableName *string, counterTableName *string, name string, group UUID) (Response, error) {
 	var ops []*dynamodb.TransactWriteItem
 	var err error
 
@@ -79,7 +137,7 @@ func dynamodb_counter_create(ci committer, groupTableName string, counterTableNa
 	return ci.commit(ops, newid)
 }
 
-func dynamodb_counter_delete(ci committer, groupTableName string, counterTableName string, group UUID, counterId UUID) (Response, error) {
+func dynamodb_counter_delete(ci committer, groupTableName *string, counterTableName *string, group UUID, counterId UUID) (Response, error) {
 	var ops []*dynamodb.TransactWriteItem
 	var err error
 
@@ -98,7 +156,7 @@ func dynamodb_counter_delete(ci committer, groupTableName string, counterTableNa
 	return ci.commit(ops, counterId)
 }
 
-func dynamodb_group_create(ci committer, groupTableName string, name string) (Response, error) {
+func dynamodb_group_create(ci committer, groupTableName *string, name string) (Response, error) {
 	var ops []*dynamodb.TransactWriteItem
 	var err error
 

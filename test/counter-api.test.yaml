@@ -3,179 +3,265 @@ vars:
   httpstem: https://5nhtenar3l.execute-api.us-east-1.amazonaws.com/api/v1/counter
   counterName: e2etest
   expr: '{"counterName":"e2etest"}'
-  token: eyJraWQiOiJjMlY1em1raDZpVHZNNm1IOHBrSDdNYitLUWVPSlhHVFpTMmZ3ZzBYR25FPSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiIxNmE3OGY4MC04ZWM0LTQ2NDMtYTRmYS0wMWI5MmQxNjc3ZDQiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiaXNzIjoiaHR0cHM6XC9cL2NvZ25pdG8taWRwLnVzLWVhc3QtMS5hbWF6b25hd3MuY29tXC91cy1lYXN0LTFfQUhMSTZqcE5HIiwiY29nbml0bzp1c2VybmFtZSI6ImZvbzJAdGhlbWFjbGVhbnMub3JnLnVrIiwib3JpZ2luX2p0aSI6IjgxZWRiNTg1LTFkODAtNDQ0OC05MGNkLWFmNTE3Y2E2NzkwMCIsImF1ZCI6IjZlc3AydDg2bDhldjdrYjYyZTg0YTBndWpqIiwiZXZlbnRfaWQiOiI2MjM1NjI5YS1lNzlhLTQxZmMtOTNiMy0yMDQ0YTMxNWMwMzgiLCJ0b2tlbl91c2UiOiJpZCIsImF1dGhfdGltZSI6MTcwNjc0NzgyNCwiZXhwIjoxNzA2NzY1ODI0LCJpYXQiOjE3MDY3NDc4MjQsImp0aSI6ImM4Zjc1NGNkLTMzNjAtNDUzNC1iMDI1LWYxMTQyZGVlMmRhMSIsImVtYWlsIjoiZm9vMkB0aGVtYWNsZWFucy5vcmcudWsifQ.K73Zdq97NWYzSRLMGJjF110Aie5rgDNPuzmkteNOG2s1DWr2CqgdokjZYUnLhLFIbz6xt09__x4Ld45F9IO55Xc3jSZhzD42PVGsWoIWA2GgzQVDJkReKsv5t_EuxZF4ou60YUxSDgwW8yO5xqMoF318yf-j0WzfDsdZ5QVbabDd0-Jh2rRfbzfWvF2HVWQvJX-GgXOHs1jX420A1ON8yAFGgofmX_vA0YkTMHCilNgz_zRtFt70gvhAMO7cDbAmAzfec6E3OfI0NoPX14e5MimgnOBBFg8V3YW0z-q8moT9HBkuUp7YGocz56uvckba_eSWbJaKoS0EmIrBmDkloA
+  token: foo
 
 testcases:
-   
-
-- name: Create a counter
+- name: group
   steps:
   - type: http
     method: POST
-    url: {{.httpstem}}/{{.counterName}}
+    url: {{.httpstem}}/api/v1/group/testgroup
     headers:
       Authorization: {{.token}}
     assertions:
     - result.statuscode ShouldEqual 200
+    - result.bodyjson.Result ShouldEqual OK
+    vars:
+      id:
+        from: result.bodyjson.Id
+        default: foo
+
+- name: create
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.counterName}}
+    headers:
+      Authorization: {{.token}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.Result ShouldEqual OK
+    vars:
+      id:
+        from: result.bodyjson.Id
+        default: foo
 
 - name: List Counters
   steps:
   - type: http
     method: GET
-    url: {{.httpstem}}
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter
     headers:
       Authorization: {{.token}}
     assertions:
     - result.statuscode ShouldEqual 200
+    - result.bodyjson.Counters.Counters0 ShouldEqual {{.create.id}}
 
 - name: Reset a counter
   steps:
   - type: http
     method: POST
-    url: {{.httpstem}}/{{.counter}}/reset
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}/reset
     headers:
       Authorization: {{.token}}
     assertions:
     - result.statuscode ShouldEqual 200
-    - result.bodyjson.countval ShouldEqual 0
+    - result.bodyjson.Result ShouldEqual OK
 
 - name: Set Step Value
   steps:
   - type: http
     method: POST
-    url: {{.httpstem}}/{{.counter}}/step?stepVal=1
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}/step?stepVal=1
     headers:
       Authorization: {{.token}}
     assertions:
     - result.statuscode ShouldEqual 200
-    - result.bodyjson.countval ShouldEqual 0
-    - result.bodyjson.stepval ShouldEqual 1
-
-
-- name: Increment a counter
-  steps:
-  - type: http
-    method: POST
-    url: {{.httpstem}}/{{.counter}}/increment
-    headers:
-      Authorization: {{.token}}
-    assertions:
-    - result.statuscode ShouldEqual 200
-    - result.bodyjson.countval ShouldEqual 1
-    - result.bodyjson.stepval ShouldEqual 1
-
-
-- name: Decrement a counter
-  steps:
-  - type: http
-    method: POST
-    url: {{.httpstem}}/{{.counter}}/decrement
-    headers:
-      Authorization: {{.token}}
-    assertions:
-    - result.statuscode ShouldEqual 200
-    - result.bodyjson.countval ShouldEqual 0
-    - result.bodyjson.stepval ShouldEqual 1
-
-- name: Set Step Value
-  steps:
-  - type: http
-    method: POST
-    url: {{.httpstem}}/{{.counter}}/step?stepVal=50
-    headers:
-      Authorization: {{.token}}
-    assertions:
-    - result.statuscode ShouldEqual 200
-    - result.bodyjson.countval ShouldEqual 0
-    - result.bodyjson.stepval ShouldEqual 50
-
-- name: Increment a counter
-  steps:
-  - type: http
-    method: POST
-    url: {{.httpstem}}/{{.counter}}/increment
-    headers:
-      Authorization: {{.token}}
-    assertions:
-    - result.statuscode ShouldEqual 200
-    - result.bodyjson.countval ShouldEqual 50
-    - result.bodyjson.stepval ShouldEqual 50
-
-- name: Set Step Value
-  steps:
-  - type: http
-    method: POST
-    url: {{.httpstem}}/{{.counter}}/step?stepVal=21
-    headers:
-      Authorization: {{.token}}
-    assertions:
-    - result.statuscode ShouldEqual 200
-    - result.bodyjson.countval ShouldEqual 50
-    - result.bodyjson.stepval ShouldEqual 21
-
-- name: Decrement a counter
-  steps:
-  - type: http
-    method: POST
-    url: {{.httpstem}}/{{.counter}}/decrement
-    headers:
-      Authorization: {{.token}}
-    assertions:
-    - result.statuscode ShouldEqual 200
-    - result.bodyjson.countval ShouldEqual 29
-    - result.bodyjson.stepval ShouldEqual 21
+    - result.bodyjson.Result ShouldEqual OK
 
 - name: Fetch a counter
   steps:
   - type: http
     method: GET
-    url: {{.httpstem}}/{{.counter}}
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}
     headers:
       Authorization: {{.token}}
     assertions:
     - result.statuscode ShouldEqual 200
-    - result.bodyjson.countval ShouldEqual 29
-    - result.bodyjson.stepval ShouldEqual 21
+    - result.bodyjson.countVal ShouldEqual 0
+    - result.bodyjson.stepVal ShouldEqual 1
+
+- name: Increment a counter
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}/increment
+    headers:
+      Authorization: {{.token}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.Result ShouldEqual OK
+
+- name: Fetch a counter val 1
+  steps:
+  - type: http
+    method: GET
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}
+    headers:
+      Authorization: {{.token}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countVal ShouldEqual 1
+    - result.bodyjson.stepVal ShouldEqual 1
+
+- name: Decrement a counter
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}/decrement
+    headers:
+      Authorization: {{.token}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.Result ShouldEqual OK
+
+- name: Fetch a counter val 0
+  steps:
+  - type: http
+    method: GET
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}
+    headers:
+      Authorization: {{.token}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countVal ShouldEqual 0
+    - result.bodyjson.stepVal ShouldEqual 1
+
+
+- name: Set Step Value
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}/step?stepVal=50
+    headers:
+      Authorization: {{.token}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.Result ShouldEqual OK    
+
+- name: Fetch a counter step 50
+  steps:
+  - type: http
+    method: GET
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}
+    headers:
+      Authorization: {{.token}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countVal ShouldEqual 0
+    - result.bodyjson.stepVal ShouldEqual 50
+
+
+- name: Increment a counter
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}/increment
+    headers:
+      Authorization: {{.token}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.Result ShouldEqual OK
+
+- name: Fetch a counter val 50
+  steps:
+  - type: http
+    method: GET
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}
+    headers:
+      Authorization: {{.token}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countVal ShouldEqual 50
+    - result.bodyjson.stepVal ShouldEqual 50
+
+
+- name: Set Step Value to 21
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}/step?stepVal=21
+    headers:
+      Authorization: {{.token}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.Result ShouldEqual OK
+
+- name: Fetch a counter step 21
+  steps:
+  - type: http
+    method: GET
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}
+    headers:
+      Authorization: {{.token}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countVal ShouldEqual 50
+    - result.bodyjson.stepVal ShouldEqual 21
+
+
+- name: Decrement a counter
+  steps:
+  - type: http
+    method: POST
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}/decrement
+    headers:
+      Authorization: {{.token}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.Result ShouldEqual OK
+
+- name: Fetch a counter val 29
+  steps:
+  - type: http
+    method: GET
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}
+    headers:
+      Authorization: {{.token}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.countVal ShouldEqual 29
+    - result.bodyjson.stepVal ShouldEqual 21
 
 - name: Reset a counter again
   steps:
   - type: http
     method: POST
-    url: {{.httpstem}}/{{.counter}}/reset
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}/reset
     headers:
       Authorization: {{.token}}
     assertions:
     - result.statuscode ShouldEqual 200
-    - result.bodyjson.countval ShouldEqual 0
-    - result.bodyjson.stepval ShouldEqual 21
+    - result.bodyjson.Result ShouldEqual OK    
 
-- name: Fetch a counter
+- name: Fetch a counter val 0
   steps:
   - type: http
     method: GET
-    url: {{.httpstem}}/{{.counter}}
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}
     headers:
       Authorization: {{.token}}
     assertions:
     - result.statuscode ShouldEqual 200
-    - result.bodyjson.countval ShouldEqual 0
-    - result.bodyjson.stepval ShouldEqual 21
+    - result.bodyjson.countVal ShouldEqual 0
+    - result.bodyjson.stepVal ShouldEqual 21
 
 - name: Delete a counter
   steps:
   - type: http
     method: DELETE
-    url: {{.httpstem}}/{{.counter}}
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}
     headers:
       Authorization: {{.token}}
     assertions:
     - result.statuscode ShouldEqual 200
+    - result.bodyjson.Result ShouldEqual OK
 
 - name: Fetch a deleted counter fails
   steps:
   - type: http
     method: GET
-    url: {{.httpstem}}/{{.counter}}
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter/{{.create.id}}
     headers:
       Authorization: {{.token}}
     assertions:
@@ -185,10 +271,10 @@ testcases:
   steps:
   - type: http
     method: GET
-    url: {{.httpstem}}
+    url: {{.httpstem}}/api/v1/group/{{.group.id}}/counter
     headers:
       Authorization: {{.token}}
     assertions:
     - result.statuscode ShouldEqual 200
-
+    - result.bodyjson.Counters.Counters0 ShouldBeEmpty
 

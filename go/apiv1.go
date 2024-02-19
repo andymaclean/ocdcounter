@@ -22,7 +22,7 @@ func incCounter(ctx context.Context, req Request) (Response, error) {
 		if counterId, cerr := ToUUID(req.PathParameters["id"]); cerr != nil {
 			return makeerror(cerr)
 		} else {
-			return dynamodb_counter_operate(dbi, counterTableName, groupId, counterId, dnquery(dq_current, dq_inc), 1)
+			return dynamodb_counter_operate(dbi, &counterTableName, groupId, counterId, dnquery(dq_current, dq_inc), 1)
 		}
 	}
 }
@@ -34,7 +34,7 @@ func decCounter(ctx context.Context, req Request) (Response, error) {
 		if counterId, cerr := ToUUID(req.PathParameters["id"]); cerr != nil {
 			return makeerror(cerr)
 		} else {
-			return dynamodb_counter_operate(dbi, counterTableName, groupId, counterId, dnquery(dq_current, dq_dec), 1)
+			return dynamodb_counter_operate(dbi, &counterTableName, groupId, counterId, dnquery(dq_current, dq_dec), 1)
 		}
 	}
 }
@@ -46,7 +46,7 @@ func getCounter(ctx context.Context, req Request) (Response, error) {
 		if counterId, cerr := ToUUID(req.PathParameters["id"]); cerr != nil {
 			return makeerror(cerr)
 		} else {
-			return dynamodb_counter_operate(dbi, counterTableName, groupId, counterId, dnquery(dq_current, dq_current), 1)
+			return dynamodb_read_counter(dbi, &counterTableName, groupId, counterId)
 		}
 	}
 }
@@ -62,7 +62,7 @@ func setCounterStep(ctx context.Context, req Request) (Response, error) {
 			if counterId, cerr := ToUUID(req.PathParameters["id"]); cerr != nil {
 				return makeerror(cerr)
 			} else {
-				return dynamodb_counter_operate(dbi, counterTableName, groupId, counterId, dnquery(dq_init, dq_current), sv)
+				return dynamodb_counter_operate(dbi, &counterTableName, groupId, counterId, dnquery(dq_init, dq_current), sv)
 			}
 		}
 	}
@@ -75,7 +75,7 @@ func resetCounter(ctx context.Context, req Request) (Response, error) {
 		if counterId, cerr := ToUUID(req.PathParameters["id"]); cerr != nil {
 			return makeerror(cerr)
 		} else {
-			return dynamodb_counter_operate(dbi, counterTableName, groupId, counterId, dnquery(dq_current, dq_init), 1)
+			return dynamodb_counter_operate(dbi, &counterTableName, groupId, counterId, dnquery(dq_current, dq_init), 1)
 		}
 	}
 }
@@ -87,7 +87,7 @@ func deleteCounter(ctx context.Context, req Request) (Response, error) {
 		if counterId, cerr := ToUUID(req.PathParameters["id"]); cerr != nil {
 			return makeerror(cerr)
 		} else {
-			return dynamodb_counter_delete(dbi, groupTableName, counterTableName, groupId, counterId)
+			return dynamodb_counter_delete(dbi, &groupTableName, &counterTableName, groupId, counterId)
 		}
 	}
 }
@@ -96,12 +96,16 @@ func createCounter(ctx context.Context, req Request) (Response, error) {
 	if groupId, gerr := ToUUID(req.PathParameters["group"]); gerr != nil {
 		return makeerror(gerr)
 	} else {
-		return dynamodb_counter_create(dbi, groupTableName, counterTableName, req.PathParameters["name"], groupId)
+		return dynamodb_counter_create(dbi, &groupTableName, &counterTableName, req.PathParameters["name"], groupId)
 	}
 }
 
 func listCounters(ctx context.Context, req Request) (Response, error) {
-	return makeerror(errors.New("NYI"))
+	if groupId, gerr := ToUUID(req.PathParameters["group"]); gerr != nil {
+		return makeerror(gerr)
+	} else {
+		return dynamodb_counter_list(dbi, &groupTableName, groupId)
+	}
 }
 
 func listGroups(ctx context.Context, req Request) (Response, error) {
@@ -109,7 +113,7 @@ func listGroups(ctx context.Context, req Request) (Response, error) {
 }
 
 func createGroup(ctx context.Context, req Request) (Response, error) {
-	return dynamodb_group_create(dbi, groupTableName, req.PathParameters["name"])
+	return dynamodb_group_create(dbi, &groupTableName, req.PathParameters["name"])
 }
 
 func deleteGroup(ctx context.Context, req Request) (Response, error) {

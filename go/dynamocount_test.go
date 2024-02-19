@@ -59,10 +59,8 @@ func checkOpsLen(t *testing.T, ops []*dynamodb.TransactWriteItem, explen int) {
 	}
 }
 
-const (
-	expCounterTable = "CounterTable"
-	expCounterName  = "TestCounter"
-)
+var expCounterTable string = "CounterTable"
+var expCounterName string = "TestCounter"
 
 var expKey = MakeUUID().String()
 var expGroup = MakeUUID()
@@ -127,7 +125,7 @@ func TestCounterCreate(t *testing.T) {
 
 	newid := MakeUUID()
 
-	ops, err = counter_create(ops, expCounterTable, newid, expCounterName, expGroup)
+	ops, err = counter_create(ops, &expCounterTable, newid, expCounterName, expGroup)
 
 	checkError(t, err, nil)
 
@@ -195,7 +193,7 @@ func TestCounterUpdate(t *testing.T) {
 	var ops []*dynamodb.TransactWriteItem
 	var err error
 
-	ops, err = counter_update(ops, expCounterTable, expGroup, expCounterUUID, "hello world", 12345)
+	ops, err = counter_update(ops, &expCounterTable, expGroup, expCounterUUID, "hello world", 12345)
 
 	checkError(t, err, nil)
 
@@ -244,7 +242,7 @@ func TestCounterDelete(t *testing.T) {
 
 	dc := MakeUUID()
 
-	ops, err = counter_delete(ops, expCounterTable, expGroup, dc)
+	ops, err = counter_delete(ops, &expCounterTable, expGroup, dc)
 
 	checkError(t, err, nil)
 
@@ -253,10 +251,8 @@ func TestCounterDelete(t *testing.T) {
 	checkCounterDelete(t, ops[0], dc)
 }
 
-const (
-	expGroupTable = "groupTable"
-	expGroupName  = "groupName"
-)
+var expGroupTable = "groupTable"
+var expGroupName = "groupName"
 
 func checkNewGroup(t *testing.T, input *dynamodb.TransactWriteItem) {
 	if input.Delete != nil {
@@ -303,7 +299,7 @@ func TestGroupCreate(t *testing.T) {
 	var ops []*dynamodb.TransactWriteItem
 	var err error
 
-	ops, err = group_create(ops, expGroupTable, expGroup, expGroupName)
+	ops, err = group_create(ops, &expGroupTable, expGroup, expGroupName)
 
 	checkError(t, err, nil)
 
@@ -358,7 +354,7 @@ func TestGroupUpdate(t *testing.T) {
 
 	nuuid := MakeUUID()
 
-	ops, err = group_update(ops, expGroupTable, expGroup, "hello world", nuuid)
+	ops, err = group_update(ops, &expGroupTable, expGroup, "hello world", nuuid)
 
 	checkError(t, err, nil)
 

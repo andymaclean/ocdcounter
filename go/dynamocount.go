@@ -66,7 +66,7 @@ func makeresponse(data any) (Response, error) {
 	return res, nil
 }
 
-func counter_create(ops []*dynamodb.TransactWriteItem, table string, counterUUID UUID, counterName string, group UUID) ([]*dynamodb.TransactWriteItem, error) {
+func counter_create(ops []*dynamodb.TransactWriteItem, table *string, counterUUID UUID, counterName string, group UUID) ([]*dynamodb.TransactWriteItem, error) {
 	record, rerr := dynamodbattribute.MarshalMap(CountData{
 		CounterId:    counterUUID.String(),
 		CounterName:  counterName,
@@ -80,7 +80,7 @@ func counter_create(ops []*dynamodb.TransactWriteItem, table string, counterUUID
 	}
 
 	input := dynamodb.Put{
-		TableName: aws.String(table),
+		TableName: table,
 		Item:      record,
 	}
 
@@ -91,11 +91,11 @@ func counter_create(ops []*dynamodb.TransactWriteItem, table string, counterUUID
 	return ops, nil
 }
 
-func counter_update(ops []*dynamodb.TransactWriteItem, table string, group UUID, counterId UUID, query string, stepval int) ([]*dynamodb.TransactWriteItem, error) {
+func counter_update(ops []*dynamodb.TransactWriteItem, table *string, group UUID, counterId UUID, query string, stepval int) ([]*dynamodb.TransactWriteItem, error) {
 	udr := dynamodb.Update{
 		Key: map[string]*dynamodb.AttributeValue{
 			counterIdCol: {S: aws.String(counterId.String())}},
-		TableName: aws.String(table),
+		TableName: table,
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 			":" + stepInit:    {N: aws.String(fmt.Sprintf("%d", stepval))},
 			":" + counterInit: {N: aws.String("0")},
@@ -113,12 +113,12 @@ func counter_update(ops []*dynamodb.TransactWriteItem, table string, group UUID,
 	return ops, nil
 }
 
-func counter_delete(ops []*dynamodb.TransactWriteItem, table string, group UUID, counterId UUID) ([]*dynamodb.TransactWriteItem, error) {
+func counter_delete(ops []*dynamodb.TransactWriteItem, table *string, group UUID, counterId UUID) ([]*dynamodb.TransactWriteItem, error) {
 	dr := dynamodb.Delete{
 		Key: map[string]*dynamodb.AttributeValue{
 			counterIdCol: {S: aws.String(counterId.String())},
 		},
-		TableName: aws.String(table),
+		TableName: table,
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 			":" + groupId: {S: aws.String(group.String())},
 		},
