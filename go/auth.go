@@ -44,6 +44,8 @@ func signup(ctx context.Context, req Request) (Response, error) {
 	pwd := aws.String(req.QueryStringParameters["password"])
 	pool := aws.String(os.Getenv("USER_POOL"))
 
+	userUUID := MakeUUID()
+
 	input := cognitoidentityprovider.AdminCreateUserInput{
 		MessageAction: aws.String("SUPPRESS"),
 		UserPoolId:    pool,
@@ -76,6 +78,12 @@ func signup(ctx context.Context, req Request) (Response, error) {
 
 	if pwerr != nil {
 		return makeerror(pwerr)
+	}
+
+	crerr := dynamodb_user_create(dbi, &userTableName, userUUID, email)
+
+	if crerr != nil {
+		return makeerror(crerr)
 	}
 
 	return makeresponse(map[string]string{"Result": "OK"})

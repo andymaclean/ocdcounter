@@ -7,12 +7,14 @@ mkdir -p out
 email="foo@example.com"
 password="FooFooFooFoo"
 
-stem=`sls info | grep 'api/v1/{Path+}' | sed -r 's/.*(https:\/\/[^\/]+).*/\1/'`
+stem=`sls info | grep 'signup' | sed -r 's/.*(https:\/\/[^\/]+).*/\1/'`
 
 echo "URL Stem: $stem"
 
 echo "Sign Up"
-curl ${stem}/signup?email=${email}\&password=${password} 2>/dev/null
+curl ${stem}/signup?email=${email}\&password=${password} 
+
+sleep 2
 
 echo
 echo "Log In"

@@ -92,15 +92,15 @@ func group_fulldelete(ops []*dynamodb.TransactWriteItem, table *string, group UU
 }
 
 const (
-	gr_add    = iota
-	gr_remove = iota
+	gr_add_ctr    = iota
+	gr_remove_ctr = iota
 )
 
 func gquery(mode int) string {
 	switch mode {
-	case gr_add:
+	case gr_add_ctr:
 		return "ADD counters :val1"
-	case gr_remove:
+	case gr_remove_ctr:
 		return "DELETE counters :val1"
 	}
 	return ""

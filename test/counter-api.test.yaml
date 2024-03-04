@@ -21,6 +21,19 @@ testcases:
         from: result.bodyjson.Id
         default: foo
 
+- name: List Groups
+  steps:
+  - type: http
+    method: GET
+    url: {{.httpstem}}/api/v1/group
+    headers:
+      Authorization: {{.token}}
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.Groups ShouldContain {{.group.id}}
+
+
+
 - name: create
   steps:
   - type: http
@@ -35,6 +48,7 @@ testcases:
       id:
         from: result.bodyjson.Id
         default: foo
+
 
 - name: List Counters
   steps:

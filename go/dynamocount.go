@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -12,23 +10,8 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 )
 
-const (
-	stepCol         = "stepVal"
-	counterCol      = "countVal"
-	stepInit        = "stepinit"
-	groupId         = "groupId"
-	counterInit     = "countinit"
-	counterNameCol  = "counterName"
-	counterIdCol    = "counterUUID"
-	counterGroupCol = "counterGroupUUID"
-	groupIdCol      = "groupUUID"
-	deleteMarkerCol = "deleteMarker"
-	groupNameCol    = "groupName"
-	counterListCol  = "counters"
-)
-
-type Response = events.APIGatewayProxyResponse
-type Request = events.APIGatewayProxyRequest
+type Response = events.APIGatewayV2HTTPResponse
+type Request = events.APIGatewayV2HTTPRequest
 
 type CountData struct {
 	CounterId    string `json:"counterUUID"`
@@ -36,34 +19,6 @@ type CountData struct {
 	CounterGroup string `json:"counterGroupUUID"`
 	CounterVal   int    `json:"countVal"`
 	StepVal      int    `json:"stepVal"`
-}
-
-func makeerror(err error) (Response, error) {
-	return Response{StatusCode: 404}, err
-}
-
-func makeresponse(data any) (Response, error) {
-	result, err := json.Marshal(data)
-
-	if err != nil {
-		return makeerror(err)
-	}
-
-	var buf bytes.Buffer
-
-	json.HTMLEscape(&buf, result)
-
-	var res = Response{
-		StatusCode:      200,
-		Body:            buf.String(),
-		IsBase64Encoded: false,
-		Headers: map[string]string{
-			"Content-Type":           "application/json",
-			"X-MyCompany-Func-Reply": "hello-handler",
-		},
-	}
-
-	return res, nil
 }
 
 func counter_create(ops []*dynamodb.TransactWriteItem, table *string, counterUUID UUID, counterName string, group UUID) ([]*dynamodb.TransactWriteItem, error) {

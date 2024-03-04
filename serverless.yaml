@@ -8,7 +8,7 @@ provider:
   memorySize: 128
   timeout: 10
   httpApi:
-    payload: "1.0"
+    payload: "2.0"
     authorizers:
       APIAUTH:
         type: jwt
@@ -21,6 +21,8 @@ provider:
       Ref: counterTable
     GROUP_TABLE: 
       Ref: groupTable
+    USER_TABLE: 
+      Ref: userTable
     USER_POOL:
       Ref: UserPool
     USER_POOL_CLIENT:
@@ -35,11 +37,16 @@ provider:
             - 'dynamodb:PutItem'
             - 'dynamodb:UpdateItem'
             - 'dynamodb:Scan'
+            - 'dynamodb:Query'
             - 'dynamodb:DeleteItem'
           Resource: 
             - !GetAtt counterTable.Arn
             - !GetAtt groupTable.Arn
-
+            - !GetAtt userTable.Arn
+            - Fn::Join:
+              - 
+              - - !GetAtt userTable.Arn
+                - /index/emailLookup
         - Effect: Allow
           Action:
             - 'cognito-idp:AdminCreateUser'
@@ -54,34 +61,85 @@ package:
     - 'bootstrap'
 
 functions:
-  signup:
-    handler: signup
+  apipublic:
+    handler: apipublic
     events:
       - httpApi:
           method: GET
           path: /signup
-  login:
-    handler: login
-    events:
+
       - httpApi:
           method: GET
           path: /login
-  loop:
-    handler: loop
-    events:
+
+  apiprivate:
+    handler: apiprivate
+    events:   
       - httpApi:
           method: GET
           path: /loop
-          authorizer:
-            name: APIAUTH
-  apiv1:
-    handler: apiv1
-    events:
+          authorizer: APIAUTH
+
       - httpApi:
-          method: '*'
-          path: /api/v1/{Path+}
-          authorizer:
-            name: APIAUTH
+          method: GET
+          path: /loopua
+
+      - httpApi:
+          method: 'GET'
+          path: /api/v1/group
+          authorizer: APIAUTH
+
+      - httpApi:
+          method: 'POST'
+          path: /api/v1/group/{name}
+          authorizer: APIAUTH
+
+      - httpApi:
+          method: 'DELETE'
+          path: /api/v1/group/{id}
+          authorizer: APIAUTH
+
+      - httpApi:
+          method: 'GET'
+          path: /api/v1/group/{group}/counter
+          authorizer: APIAUTH
+
+      - httpApi:
+          method: 'GET'
+          path: /api/v1/group/{group}/counter/{id}
+          authorizer: APIAUTH
+
+      - httpApi:
+          method: 'POST'
+          path: /api/v1/group/{group}/counter/{name}
+          authorizer: APIAUTH
+
+      - httpApi:
+          method: 'POST'
+          path: /api/v1/group/{group}/counter/{id}/increment
+          authorizer: APIAUTH
+
+      - httpApi:
+          method: 'POST'
+          path: /api/v1/group/{group}/counter/{id}/decrement
+          authorizer: APIAUTH
+
+      - httpApi:
+          method: 'POST'
+          path: /api/v1/group/{group}/counter/{id}/reset
+          authorizer: APIAUTH
+
+      - httpApi:
+          method: 'POST'
+          path: /api/v1/group/{group}/counter/{id}/step
+          authorizer: APIAUTH
+
+      - httpApi:
+          method: 'DELETE'
+          path: /api/v1/group/{group}/counter/{id}
+          authorizer: APIAUTH
+
+
 
 
 
@@ -113,6 +171,30 @@ resources:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
 
+    userTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: userUUID
+            AttributeType: S
+          - AttributeName: userEmail
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userUUID
+            KeyType:  HASH
+        GlobalSecondaryIndexes:
+          - IndexName: emailLookup
+            KeySchema:
+              - AttributeName: userEmail
+                KeyType:  HASH
+            Projection:
+              ProjectionType: KEYS_ONLY
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
 
     UserPool:
       Type: AWS::Cognito::UserPool
@@ -121,7 +203,7 @@ resources:
         Schema:
           - Name: email
             Required: true
-            Mutable: true
+            Mutable: true           
         Policies:
           PasswordPolicy:
             MinimumLength: 6

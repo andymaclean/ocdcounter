@@ -338,7 +338,7 @@ func checkGroupUpdate(t *testing.T, input *dynamodb.TransactWriteItem, expVal1 U
 	}
 
 	if kval != expGroup.String() {
-		t.Errorf("Group UUID is %s not %s.", kval, expGroup.String())
+		t.Errorf("Group UUID is %s not %s.", kval, expUser.String())
 	}
 
 	query := *ud.UpdateExpression
@@ -361,4 +361,115 @@ func TestGroupUpdate(t *testing.T) {
 	checkOpsLen(t, ops, 1)
 
 	checkGroupUpdate(t, ops[0], nuuid, "hello world")
+}
+
+var expUserTable = "userTable"
+var expUserName = "userName"
+var expUser = MakeUUID()
+
+func checkNewUser(t *testing.T, input *dynamodb.TransactWriteItem) {
+	if input.Delete != nil {
+		t.Error("Unexpected delete request")
+	}
+
+	if input.Update != nil {
+		t.Error("Unexpected Update request")
+	}
+
+	if input.Put == nil {
+		t.Fatal("Expected put request was not present")
+	}
+
+	put := input.Put
+
+	if *put.TableName != expUserTable {
+		t.Errorf("Table name is %s not %s", *put.TableName, expUserTable)
+	}
+
+	kval := *put.Item[userIdCol].S
+	if kval != expUser.String() {
+		t.Errorf("Key is %s not %s", kval, expUser.String())
+	}
+
+	nval := *put.Item[userNameCol].S
+
+	if _, present := put.Item[deleteMarkerCol]; present {
+		t.Error("Delete marker in record")
+	}
+
+	if _, present := put.Item[groupListCol]; present {
+		t.Error("Empty counter list in record")
+	}
+
+	if nval != expUserName {
+		t.Errorf("Name is %s not %s", nval, expUserName)
+	}
+}
+
+func TestUserCreate(t *testing.T) {
+	var ops []*dynamodb.TransactWriteItem
+	var err error
+
+	ops, err = user_create(ops, &expUserTable, expUser, &expUserName)
+
+	checkError(t, err, nil)
+
+	checkOpsLen(t, ops, 1)
+
+	checkNewUser(t, ops[0])
+}
+
+func checkUserUpdate(t *testing.T, input *dynamodb.TransactWriteItem, expVal1 UUID, expQuery string) {
+	if input.Delete != nil {
+		t.Error("Unexpected delete request")
+	}
+
+	if input.Put != nil {
+		t.Error("Unexpected Put request")
+	}
+
+	if input.Update == nil {
+		t.Fatal("Expected Update request was not present")
+	}
+
+	ud := input.Update
+
+	if *ud.TableName != expUserTable {
+		t.Errorf("Table name is %s not %s", *ud.TableName, expUserTable)
+	}
+
+	kval := *ud.Key[userIdCol].S
+
+	if grp, gerr := ToUUID(*ud.ExpressionAttributeValues[":val1"].SS[0]); gerr != nil {
+		t.Errorf("Val1 is not a valid uuid: %s", gerr)
+	} else {
+		if grp != expVal1 {
+			t.Errorf("Initial counter is %s not %s", grp, expVal1.String())
+		}
+	}
+
+	if kval != expUser.String() {
+		t.Errorf("Group UUID is %s not %s.", kval, expUser.String())
+	}
+
+	query := *ud.UpdateExpression
+
+	if query != expQuery {
+		t.Errorf("Query is %s not %s", query, expQuery)
+	}
+}
+
+func TestUserUpdate(t *testing.T) {
+	var ops []*dynamodb.TransactWriteItem
+	var err error
+
+	nuuid := MakeUUID()
+
+	ops, err = user_update(ops, &expUserTable, &expUser, "hello world", nuuid)
+
+	checkError(t, err, nil)
+
+	checkOpsLen(t, ops, 1)
+
+	checkUserUpdate(t, ops[0], nuuid, "hello world")
 }

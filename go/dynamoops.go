@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -18,7 +20,9 @@ type opResult struct {
 
 type committer interface {
 	commit(ops []*dynamodb.TransactWriteItem, id UUID) (Response, error)
+	inline_commit(ops []*dynamodb.TransactWriteItem) error
 	GetItem(*dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error)
+	Query(*dynamodb.QueryInput) (*dynamodb.QueryOutput, error)
 }
 
 type dynamoCommitter struct {
@@ -36,6 +40,37 @@ func dynamodb_iface() committer {
 	return dynamoCommitter{dbi: dynamodbiface.DynamoDBAPI(svc)}
 }
 
+func makeerror(err error) (Response, error) {
+	return Response{
+		StatusCode: 404,
+		Body:       err.Error(),
+	}, nil
+}
+
+func makeresponse(data any) (Response, error) {
+	result, err := json.Marshal(data)
+
+	if err != nil {
+		return makeerror(err)
+	}
+
+	var buf bytes.Buffer
+
+	json.HTMLEscape(&buf, result)
+
+	var res = Response{
+		StatusCode:      200,
+		Body:            buf.String(),
+		IsBase64Encoded: false,
+		Headers: map[string]string{
+			"Content-Type":           "application/json",
+			"X-MyCompany-Func-Reply": "hello-handler",
+		},
+	}
+
+	return res, nil
+}
+
 func (ci dynamoCommitter) commit(ops []*dynamodb.TransactWriteItem, id UUID) (Response, error) {
 	input := dynamodb.TransactWriteItemsInput{
 		TransactItems: ops,
@@ -50,8 +85,44 @@ func (ci dynamoCommitter) commit(ops []*dynamodb.TransactWriteItem, id UUID) (Re
 	return makeresponse(opResult{Success: true, Result: "OK", Id: id.String()})
 }
 
+func (ci dynamoCommitter) inline_commit(ops []*dynamodb.TransactWriteItem) error {
+	input := dynamodb.TransactWriteItemsInput{
+		TransactItems: ops,
+	}
+
+	_, err := ci.dbi.TransactWriteItems(&input)
+
+	return err
+}
+
 func (ci dynamoCommitter) GetItem(in *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
 	return ci.dbi.GetItem(in)
+}
+
+func (ci dynamoCommitter) Query(in *dynamodb.QueryInput) (*dynamodb.QueryOutput, error) {
+	return ci.dbi.Query(in)
+}
+
+func dynamodb_lookup_userUUID(ci committer, userTable *string, email *string) (UUID, error) {
+	resp, err := ci.Query(&dynamodb.QueryInput{
+		TableName: userTable,
+		IndexName: aws.String(userEmailIndex),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":email": {S: email},
+		},
+		KeyConditionExpression: aws.String(emailCol + " = :email"),
+		ProjectionExpression:   aws.String(userIdCol),
+	})
+
+	if err != nil {
+		return NullUUID(), err
+	}
+
+	if resi := len(resp.Items); resi != 1 {
+		return NullUUID(), fmt.Errorf("incorrect Item count (%d) from user lookup", resi)
+	}
+
+	return ToUUID(*resp.Items[0][userIdCol].S)
 }
 
 func dynamodb_read_counter(ci committer, counterTable *string, groupId UUID, counterId UUID) (Response, error) {
@@ -128,7 +199,7 @@ func dynamodb_counter_create(ci committer, groupTableName *string, counterTableN
 		return makeerror(err)
 	}
 
-	ops, err = group_update(ops, groupTableName, group, gquery(gr_add), newid)
+	ops, err = group_update(ops, groupTableName, group, gquery(gr_add_ctr), newid)
 
 	if err != nil {
 		return makeerror(err)
@@ -147,7 +218,7 @@ func dynamodb_counter_delete(ci committer, groupTableName *string, counterTableN
 		return makeerror(err)
 	}
 
-	ops, err = group_update(ops, groupTableName, group, gquery(gr_remove), counterId)
+	ops, err = group_update(ops, groupTableName, group, gquery(gr_remove_ctr), counterId)
 
 	if err != nil {
 		return makeerror(err)
@@ -156,7 +227,7 @@ func dynamodb_counter_delete(ci committer, groupTableName *string, counterTableN
 	return ci.commit(ops, counterId)
 }
 
-func dynamodb_group_create(ci committer, groupTableName *string, name string) (Response, error) {
+func dynamodb_group_create(ci committer, userTableName *string, groupTableName *string, creator *UUID, name string) (Response, error) {
 	var ops []*dynamodb.TransactWriteItem
 	var err error
 
@@ -168,5 +239,47 @@ func dynamodb_group_create(ci committer, groupTableName *string, name string) (R
 		return makeerror(err)
 	}
 
+	ops, err = user_update(ops, userTableName, creator, uquery(usr_add_grp), newid)
+
+	if err != nil {
+		return makeerror(err)
+	}
+
 	return ci.commit(ops, newid)
+}
+
+func dynamodb_user_create(ci committer, userTableName *string, userId UUID, name *string) error {
+	var ops []*dynamodb.TransactWriteItem
+	var err error
+
+	ops, err = user_create(ops, userTableName, userId, name)
+
+	if err != nil {
+		return err
+	}
+
+	return ci.inline_commit(ops)
+}
+
+func dynamodb_group_list(ci committer, userTableName *string, userId *UUID) (Response, error) {
+	out, err := ci.GetItem(&dynamodb.GetItemInput{
+		Key: map[string]*dynamodb.AttributeValue{
+			userIdCol: {S: aws.String(userId.String())},
+		},
+		TableName: userTableName,
+	})
+
+	if err != nil {
+		return makeerror(err)
+	}
+
+	var ud UserData
+
+	gderr := dynamodbattribute.UnmarshalMap(out.Item, &ud)
+
+	if gderr != nil {
+		return makeerror(gderr)
+	}
+
+	return makeresponse(map[string][]string{"Groups": ud.Groups})
 }

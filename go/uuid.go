@@ -39,3 +39,9 @@ func ToUUID(uuid string) (UUID, error) {
 		uuid: u,
 	}, nil
 }
+
+func NullUUID() UUID {
+	return UUID{
+		uuid: googleUUID.Nil,
+	}
+}
