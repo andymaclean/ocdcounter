@@ -14,16 +14,18 @@ type Response = events.APIGatewayV2HTTPResponse
 type Request = events.APIGatewayV2HTTPRequest
 
 type CountData struct {
-	CounterId    string `json:"counterUUID"`
+	CounterId    string `json:"objectUUID"`
 	CounterName  string `json:"counterName"`
 	CounterGroup string `json:"counterGroupUUID"`
 	CounterVal   int    `json:"countVal"`
 	StepVal      int    `json:"stepVal"`
+	ObjectType   string `json:"objectType"`
 }
 
 func counter_create(ops []*dynamodb.TransactWriteItem, table *string, counterUUID UUID, counterName string, group UUID) ([]*dynamodb.TransactWriteItem, error) {
 	record, rerr := dynamodbattribute.MarshalMap(CountData{
 		CounterId:    counterUUID.String(),
+		ObjectType:   "Counter",
 		CounterName:  counterName,
 		CounterGroup: group.String(),
 		CounterVal:   0,
@@ -49,7 +51,9 @@ func counter_create(ops []*dynamodb.TransactWriteItem, table *string, counterUUI
 func counter_update(ops []*dynamodb.TransactWriteItem, table *string, group UUID, counterId UUID, query string, stepval int) ([]*dynamodb.TransactWriteItem, error) {
 	udr := dynamodb.Update{
 		Key: map[string]*dynamodb.AttributeValue{
-			counterIdCol: {S: aws.String(counterId.String())}},
+			counterIdCol:  {S: aws.String(counterId.String())},
+			objectTypeCol: {S: aws.String("Counter")},
+		},
 		TableName: table,
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 			":" + stepInit:    {N: aws.String(fmt.Sprintf("%d", stepval))},
@@ -71,7 +75,8 @@ func counter_update(ops []*dynamodb.TransactWriteItem, table *string, group UUID
 func counter_delete(ops []*dynamodb.TransactWriteItem, table *string, group UUID, counterId UUID) ([]*dynamodb.TransactWriteItem, error) {
 	dr := dynamodb.Delete{
 		Key: map[string]*dynamodb.AttributeValue{
-			counterIdCol: {S: aws.String(counterId.String())},
+			counterIdCol:  {S: aws.String(counterId.String())},
+			objectTypeCol: {S: aws.String("Counter")},
 		},
 		TableName: table,
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{

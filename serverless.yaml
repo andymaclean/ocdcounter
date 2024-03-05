@@ -18,11 +18,11 @@ provider:
           - Ref: UserPoolClient
   environment:
     COUNTER_TABLE: 
-      Ref: counterTable
+      Ref: dataTable
     GROUP_TABLE: 
-      Ref: groupTable
+      Ref: dataTable
     USER_TABLE: 
-      Ref: userTable
+      Ref: dataTable
     USER_POOL:
       Ref: UserPool
     USER_POOL_CLIENT:
@@ -40,12 +40,11 @@ provider:
             - 'dynamodb:Query'
             - 'dynamodb:DeleteItem'
           Resource: 
-            - !GetAtt counterTable.Arn
-            - !GetAtt groupTable.Arn
-            - !GetAtt userTable.Arn
+            - !GetAtt permissionTable.Arn
+            - !GetAtt dataTable.Arn
             - Fn::Join:
               - 
-              - - !GetAtt userTable.Arn
+              - - !GetAtt dataTable.Arn
                 - /index/emailLookup
         - Effect: Allow
           Action:
@@ -145,43 +144,38 @@ functions:
 
 resources:
   Resources:
-    counterTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        AttributeDefinitions:
-          - AttributeName: counterUUID
-            AttributeType: S
-        KeySchema:
-          - AttributeName: counterUUID
-            KeyType:  HASH     
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
-
-    groupTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        AttributeDefinitions:
-          - AttributeName: groupUUID
-            AttributeType: S
-        KeySchema:
-          - AttributeName: groupUUID
-            KeyType:  HASH     
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
-
-    userTable:
+    permissionTable:
       Type: AWS::DynamoDB::Table
       Properties:
         AttributeDefinitions:
           - AttributeName: userUUID
             AttributeType: S
-          - AttributeName: userEmail
+          - AttributeName: objectTypeUUID
             AttributeType: S
         KeySchema:
           - AttributeName: userUUID
             KeyType:  HASH
+          - AttributeName: objectTypeUUID
+            KeyType:  RANGE    
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 1
+
+    dataTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: objectUUID
+            AttributeType: S
+          - AttributeName: objectType
+            AttributeType: S
+          - AttributeName: userEmail
+            AttributeType: S
+        KeySchema:
+          - AttributeName: objectUUID
+            KeyType:  HASH
+          - AttributeName: objectType
+            KeyType:  RANGE     
         GlobalSecondaryIndexes:
           - IndexName: emailLookup
             KeySchema:
@@ -190,11 +184,11 @@ resources:
             Projection:
               ProjectionType: KEYS_ONLY
             ProvisionedThroughput:
-              ReadCapacityUnits: 1
+              ReadCapacityUnits: 5
               WriteCapacityUnits: 1
         ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
 
     UserPool:
       Type: AWS::Cognito::UserPool

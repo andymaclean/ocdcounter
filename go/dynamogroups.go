@@ -9,15 +9,17 @@ import (
 )
 
 type GroupData struct {
-	GroupId   string   `dynamodbav:"groupUUID"`
-	Counters  []string `dynamodbav:"counters,stringset,omitempty"`
-	GroupName string   `dynamodbav:"groupName"`
+	GroupId    string   `dynamodbav:"objectUUID"`
+	Counters   []string `dynamodbav:"counters,stringset,omitempty"`
+	GroupName  string   `dynamodbav:"groupName"`
+	ObjectType string   `dynamodbav:"objectType"`
 }
 
 func group_create(ops []*dynamodb.TransactWriteItem, table *string, groupUUID UUID, groupName string) ([]*dynamodb.TransactWriteItem, error) {
 	record, rerr := dynamodbattribute.MarshalMap(GroupData{
-		GroupId:   groupUUID.String(),
-		GroupName: groupName,
+		GroupId:    groupUUID.String(),
+		ObjectType: "Group",
+		GroupName:  groupName,
 	})
 
 	if rerr != nil {
@@ -39,7 +41,9 @@ func group_create(ops []*dynamodb.TransactWriteItem, table *string, groupUUID UU
 func group_update(ops []*dynamodb.TransactWriteItem, table *string, group UUID, query string, val1 UUID) ([]*dynamodb.TransactWriteItem, error) {
 	udr := dynamodb.Update{
 		Key: map[string]*dynamodb.AttributeValue{
-			groupIdCol: {S: aws.String(group.String())}},
+			groupIdCol:    {S: aws.String(group.String())},
+			objectTypeCol: {S: aws.String("Group")},
+		},
 		TableName: table,
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 			":val1": {SS: []*string{aws.String(val1.String())}},
@@ -59,10 +63,13 @@ func group_update(ops []*dynamodb.TransactWriteItem, table *string, group UUID, 
 func group_mark_delete(ops []*dynamodb.TransactWriteItem, table *string, group UUID) ([]*dynamodb.TransactWriteItem, error) {
 	udr := dynamodb.Update{
 		Key: map[string]*dynamodb.AttributeValue{
-			groupIdCol: {S: aws.String(group.String())}},
+			groupIdCol:    {S: aws.String(group.String())},
+			objectTypeCol: {S: aws.String("Group")},
+		},
 		TableName: table,
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 			":true": {BOOL: aws.Bool(true)},
+			":type": {S: aws.String("Group")},
 		},
 		UpdateExpression:    aws.String(fmt.Sprintf("SET %s = :true", deleteMarkerCol)),
 		ConditionExpression: aws.String(fmt.Sprintf("attribute_exists(%s)", groupIdCol)),

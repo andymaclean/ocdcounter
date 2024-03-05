@@ -128,7 +128,8 @@ func dynamodb_lookup_userUUID(ci committer, userTable *string, email *string) (U
 func dynamodb_read_counter(ci committer, counterTable *string, groupId UUID, counterId UUID) (Response, error) {
 	out, err := ci.GetItem(&dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			counterIdCol: {S: aws.String(counterId.String())},
+			counterIdCol:  {S: aws.String(counterId.String())},
+			objectTypeCol: {S: aws.String("Counter")},
 		},
 		TableName: counterTable,
 	})
@@ -154,7 +155,8 @@ func dynamodb_read_counter(ci committer, counterTable *string, groupId UUID, cou
 func dynamodb_counter_list(ci committer, groupTableName *string, groupId UUID) (Response, error) {
 	out, err := ci.GetItem(&dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			groupIdCol: {S: aws.String(groupId.String())},
+			groupIdCol:    {S: aws.String(groupId.String())},
+			objectTypeCol: {S: aws.String("Group")},
 		},
 		TableName: groupTableName,
 	})
@@ -264,7 +266,8 @@ func dynamodb_user_create(ci committer, userTableName *string, userId UUID, name
 func dynamodb_group_list(ci committer, userTableName *string, userId *UUID) (Response, error) {
 	out, err := ci.GetItem(&dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			userIdCol: {S: aws.String(userId.String())},
+			userIdCol:     {S: aws.String(userId.String())},
+			objectTypeCol: {S: aws.String("User")},
 		},
 		TableName: userTableName,
 	})
