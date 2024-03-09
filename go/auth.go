@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cognitoidentityprovider"
 )
 
-func login(ctx context.Context, req Request) (Response, error) {
+func login(ctx context.Context, req Request, dbo DataOperator) (Response, error) {
 	mySession := session.Must(session.NewSession())
 	svc := cognitoidentityprovider.New(mySession)
 	email := aws.String(req.QueryStringParameters["email"])
@@ -36,7 +36,7 @@ func login(ctx context.Context, req Request) (Response, error) {
 	return makeresponse(map[string]string{"Result": "OK", "Token": *resp.AuthenticationResult.IdToken})
 }
 
-func signup(ctx context.Context, req Request) (Response, error) {
+func signup(ctx context.Context, req Request, dbo DataOperator) (Response, error) {
 	mySession := session.Must(session.NewSession())
 	svc := cognitoidentityprovider.New(mySession)
 
@@ -80,7 +80,7 @@ func signup(ctx context.Context, req Request) (Response, error) {
 		return makeerror(pwerr)
 	}
 
-	crerr := dynamodb_user_create(dbi, &userTableName, userUUID, email)
+	crerr := dbo.UserCreate(userUUID, email)
 
 	if crerr != nil {
 		return makeerror(crerr)

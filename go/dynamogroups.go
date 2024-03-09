@@ -38,10 +38,10 @@ func group_create(ops []*dynamodb.TransactWriteItem, table *string, groupUUID UU
 	return ops, nil
 }
 
-func group_update(ops []*dynamodb.TransactWriteItem, table *string, group UUID, query string, val1 UUID) ([]*dynamodb.TransactWriteItem, error) {
+func group_update(ops []*dynamodb.TransactWriteItem, table *string, groupId *UUID, query string, val1 UUID) ([]*dynamodb.TransactWriteItem, error) {
 	udr := dynamodb.Update{
 		Key: map[string]*dynamodb.AttributeValue{
-			groupIdCol:    {S: aws.String(group.String())},
+			groupIdCol:    {S: aws.String(groupId.String())},
 			objectTypeCol: {S: aws.String("Group")},
 		},
 		TableName: table,
@@ -60,10 +60,10 @@ func group_update(ops []*dynamodb.TransactWriteItem, table *string, group UUID, 
 	return ops, nil
 }
 
-func group_mark_delete(ops []*dynamodb.TransactWriteItem, table *string, group UUID) ([]*dynamodb.TransactWriteItem, error) {
+func group_mark_delete(ops []*dynamodb.TransactWriteItem, table *string, groupId *UUID) ([]*dynamodb.TransactWriteItem, error) {
 	udr := dynamodb.Update{
 		Key: map[string]*dynamodb.AttributeValue{
-			groupIdCol:    {S: aws.String(group.String())},
+			groupIdCol:    {S: aws.String(groupId.String())},
 			objectTypeCol: {S: aws.String("Group")},
 		},
 		TableName: table,
@@ -83,10 +83,10 @@ func group_mark_delete(ops []*dynamodb.TransactWriteItem, table *string, group U
 	return ops, nil
 }
 
-func group_fulldelete(ops []*dynamodb.TransactWriteItem, table *string, group UUID) ([]*dynamodb.TransactWriteItem, error) {
+func group_fulldelete(ops []*dynamodb.TransactWriteItem, table *string, groupId *UUID) ([]*dynamodb.TransactWriteItem, error) {
 	dr := dynamodb.Delete{
 		Key: map[string]*dynamodb.AttributeValue{
-			groupIdCol: {S: aws.String(group.String())}},
+			groupIdCol: {S: aws.String(groupId.String())}},
 		TableName: table,
 	}
 

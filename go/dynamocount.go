@@ -22,12 +22,12 @@ type CountData struct {
 	ObjectType   string `json:"objectType"`
 }
 
-func counter_create(ops []*dynamodb.TransactWriteItem, table *string, counterUUID UUID, counterName string, group UUID) ([]*dynamodb.TransactWriteItem, error) {
+func counter_create(ops []*dynamodb.TransactWriteItem, table *string, counterUUID UUID, counterName string, groupId *UUID) ([]*dynamodb.TransactWriteItem, error) {
 	record, rerr := dynamodbattribute.MarshalMap(CountData{
 		CounterId:    counterUUID.String(),
 		ObjectType:   "Counter",
 		CounterName:  counterName,
-		CounterGroup: group.String(),
+		CounterGroup: groupId.String(),
 		CounterVal:   0,
 		StepVal:      1,
 	})
@@ -48,7 +48,7 @@ func counter_create(ops []*dynamodb.TransactWriteItem, table *string, counterUUI
 	return ops, nil
 }
 
-func counter_update(ops []*dynamodb.TransactWriteItem, table *string, group UUID, counterId UUID, query string, stepval int) ([]*dynamodb.TransactWriteItem, error) {
+func counter_update(ops []*dynamodb.TransactWriteItem, table *string, groupId *UUID, counterId UUID, query string, stepval int) ([]*dynamodb.TransactWriteItem, error) {
 	udr := dynamodb.Update{
 		Key: map[string]*dynamodb.AttributeValue{
 			counterIdCol:  {S: aws.String(counterId.String())},
@@ -58,10 +58,10 @@ func counter_update(ops []*dynamodb.TransactWriteItem, table *string, group UUID
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 			":" + stepInit:    {N: aws.String(fmt.Sprintf("%d", stepval))},
 			":" + counterInit: {N: aws.String("0")},
-			":" + groupId:     {S: aws.String(group.String())},
+			":" + groupIdVal:  {S: aws.String(groupId.String())},
 		},
 		UpdateExpression:    aws.String(query),
-		ConditionExpression: aws.String(fmt.Sprintf("attribute_exists(%s) and %s = :%s", counterIdCol, counterGroupCol, groupId)),
+		ConditionExpression: aws.String(fmt.Sprintf("attribute_exists(%s) and %s = :%s", counterIdCol, counterGroupCol, groupIdVal)),
 	}
 
 	//log.Print("Update Query: ", query)
@@ -72,7 +72,7 @@ func counter_update(ops []*dynamodb.TransactWriteItem, table *string, group UUID
 	return ops, nil
 }
 
-func counter_delete(ops []*dynamodb.TransactWriteItem, table *string, group UUID, counterId UUID) ([]*dynamodb.TransactWriteItem, error) {
+func counter_delete(ops []*dynamodb.TransactWriteItem, table *string, groupId *UUID, counterId UUID) ([]*dynamodb.TransactWriteItem, error) {
 	dr := dynamodb.Delete{
 		Key: map[string]*dynamodb.AttributeValue{
 			counterIdCol:  {S: aws.String(counterId.String())},
@@ -80,9 +80,9 @@ func counter_delete(ops []*dynamodb.TransactWriteItem, table *string, group UUID
 		},
 		TableName: table,
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":" + groupId: {S: aws.String(group.String())},
+			":" + groupIdVal: {S: aws.String(groupId.String())},
 		},
-		ConditionExpression: aws.String(fmt.Sprintf("%s = :%s", counterGroupCol, groupId)),
+		ConditionExpression: aws.String(fmt.Sprintf("%s = :%s", counterGroupCol, groupIdVal)),
 	}
 
 	ops = append(ops, &dynamodb.TransactWriteItem{

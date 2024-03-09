@@ -4,7 +4,7 @@ const (
 	stepCol         = "stepVal"
 	counterCol      = "countVal"
 	stepInit        = "stepinit"
-	groupId         = "groupId"
+	groupIdVal      = "groupId"
 	counterInit     = "countinit"
 	counterNameCol  = "counterName"
 	counterIdCol    = "objectUUID"
@@ -19,4 +19,6 @@ const (
 	userEmailIndex  = "emailLookup"
 	emailCol        = "userEmail"
 	objectTypeCol   = "objectType"
+	principalIdCol  = "userUUID"
+	objectTypeIdCol = "objectTypeUUID"
 )
