@@ -13,6 +13,17 @@ type dynamoDBInterface struct {
 	dbi dynamodbiface.DynamoDBAPI
 }
 
+func dynamodb_iface() dynamoDBInterface {
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
+
+	//Create DynamoDB client
+	svc := dynamodb.New(sess)
+
+	return dynamoDBInterface{dbi: dynamodbiface.DynamoDBAPI(svc)}
+}
+
 func Create_DynamoDBInterface() dynamoDBInterface {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,

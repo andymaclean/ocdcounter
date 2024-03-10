@@ -37,10 +37,15 @@ func Create_APISession(dbo DataOperator, req Request) (APISession, error) {
 			}, nil
 		}
 	}
+
+	return APISession{
+		userId:    uuid,
+		userEmail: &email,
+	}, nil
 }
 
-func (s APISession) GetUserId() UUID {
-	return s.userId
+func (s APISession) GetUserId() *UUID {
+	return &s.userId
 }
 
 func (s APISession) GetUserIdString() *string {
@@ -51,8 +56,8 @@ func (s APISession) GetUserIdString() *string {
 	return s.userIdString
 }
 
-func (s APISession) GetGroupId() UUID {
-	return s.groupId
+func (s APISession) GetGroupId() *UUID {
+	return &s.groupId
 }
 
 func (s APISession) GetGroupIdString() *string {

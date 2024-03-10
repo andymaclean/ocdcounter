@@ -15,7 +15,7 @@ type GroupData struct {
 	ObjectType string   `dynamodbav:"objectType"`
 }
 
-func group_create(ops []*dynamodb.TransactWriteItem, table *string, groupUUID UUID, groupName string) ([]*dynamodb.TransactWriteItem, error) {
+func append_group_create(ops []*dynamodb.TransactWriteItem, table *string, groupUUID UUID, groupName string) ([]*dynamodb.TransactWriteItem, error) {
 	record, rerr := dynamodbattribute.MarshalMap(GroupData{
 		GroupId:    groupUUID.String(),
 		ObjectType: "Group",
@@ -38,7 +38,7 @@ func group_create(ops []*dynamodb.TransactWriteItem, table *string, groupUUID UU
 	return ops, nil
 }
 
-func group_update(ops []*dynamodb.TransactWriteItem, table *string, groupId *UUID, query string, val1 UUID) ([]*dynamodb.TransactWriteItem, error) {
+func append_group_update(ops []*dynamodb.TransactWriteItem, table *string, groupId *UUID, query string, val1 UUID) ([]*dynamodb.TransactWriteItem, error) {
 	udr := dynamodb.Update{
 		Key: map[string]*dynamodb.AttributeValue{
 			groupIdCol:    {S: aws.String(groupId.String())},

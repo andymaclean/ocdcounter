@@ -8,10 +8,10 @@ import (
 // these are for task level operations and represent the session-specific parameters for the operation.
 // i.e. what group are they operating in, what user are they, etc.
 type Session interface {
-	GetUserId() UUID
+	GetUserId() *UUID
 	GetUserIdString() *string
 
-	GetGroupId() UUID
+	GetGroupId() *UUID
 	GetGroupIdString() *string
 }
 

@@ -51,7 +51,7 @@ func (dbo DynamoOperator) LookupUserUUID(email *string) (UUID, error) {
 	return ToUUID(*resp.Items[0][userIdCol].S)
 }
 
-func (dbo DynamoOperator) CounterRead(userId *UUID, groupId *UUID, counterId UUID) (Response, error) {
+func (dbo DynamoOperator) CounterRead(s Session, counterId UUID) (Response, error) {
 	out, err := dbo.dbi.GetItem(&dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			counterIdCol:  {S: aws.String(counterId.String())},
@@ -71,17 +71,17 @@ func (dbo DynamoOperator) CounterRead(userId *UUID, groupId *UUID, counterId UUI
 		return makeerror(cderr)
 	}
 
-	if cd.CounterGroup != groupId.String() {
-		return makeerror(fmt.Errorf("counter group is %s not %s", cd.CounterGroup, groupId.String()))
+	if cd.CounterGroup != *s.GetGroupIdString() {
+		return makeerror(fmt.Errorf("counter group is %s not %s", cd.CounterGroup, *s.GetGroupIdString()))
 	}
 
 	return makeresponse(cd)
 }
 
-func (dbo DynamoOperator) CounterList(userId *UUID, groupId *UUID) (Response, error) {
+func (dbo DynamoOperator) CounterList(s Session) (Response, error) {
 	out, err := dbo.dbi.GetItem(&dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			groupIdCol:    {S: aws.String(groupId.String())},
+			groupIdCol:    {S: s.GetGroupIdString()},
 			objectTypeCol: {S: &dbo.groupType},
 		},
 		TableName: &dbo.groupTable,
@@ -102,11 +102,11 @@ func (dbo DynamoOperator) CounterList(userId *UUID, groupId *UUID) (Response, er
 	return makeresponse(map[string][]string{"Counters": gd.Counters})
 }
 
-func (dbo DynamoOperator) CounterUpdate(userId *UUID, groupId *UUID, id UUID, query string, stepVal int) (Response, error) {
+func (dbo DynamoOperator) CounterUpdate(s Session, id UUID, query string, stepVal int) (Response, error) {
 	var ops []*dynamodb.TransactWriteItem
 	var err error
 
-	ops, err = append_counter_update(ops, &dbo.counterTable, groupId, id, query, stepVal)
+	ops, err = append_counter_update(ops, &dbo.counterTable, s.GetGroupId(), id, query, stepVal)
 
 	if err != nil {
 		return makeerror(err)
@@ -115,19 +115,19 @@ func (dbo DynamoOperator) CounterUpdate(userId *UUID, groupId *UUID, id UUID, qu
 	return dbo.dbi.commit(ops, id)
 }
 
-func (dbo DynamoOperator) CounterCreate(name string, userId *UUID, groupId *UUID) (Response, error) {
+func (dbo DynamoOperator) CounterCreate(s Session, name string) (Response, error) {
 	var ops []*dynamodb.TransactWriteItem
 	var err error
 
 	newid := MakeUUID()
 
-	ops, err = append_counter_create(ops, &dbo.counterTable, newid, name, groupId)
+	ops, err = append_counter_create(ops, &dbo.counterTable, newid, name, s.GetGroupId())
 
 	if err != nil {
 		return makeerror(err)
 	}
 
-	ops, err = append_group_update(ops, &dbo.groupTable, groupId, gquery(gr_add_ctr), newid)
+	ops, err = append_group_update(ops, &dbo.groupTable, s.GetGroupId(), gquery(gr_add_ctr), newid)
 
 	if err != nil {
 		return makeerror(err)
@@ -136,17 +136,17 @@ func (dbo DynamoOperator) CounterCreate(name string, userId *UUID, groupId *UUID
 	return dbo.dbi.commit(ops, newid)
 }
 
-func (dbo DynamoOperator) CounterDelete(userId *UUID, groupId *UUID, counterId UUID) (Response, error) {
+func (dbo DynamoOperator) CounterDelete(s Session, counterId UUID) (Response, error) {
 	var ops []*dynamodb.TransactWriteItem
 	var err error
 
-	ops, err = append_counter_delete(ops, &dbo.counterTable, groupId, counterId)
+	ops, err = append_counter_delete(ops, &dbo.counterTable, s.GetGroupId(), counterId)
 
 	if err != nil {
 		return makeerror(err)
 	}
 
-	ops, err = append_group_update(ops, &dbo.groupTable, groupId, gquery(gr_remove_ctr), counterId)
+	ops, err = append_group_update(ops, &dbo.groupTable, s.GetGroupId(), gquery(gr_remove_ctr), counterId)
 
 	if err != nil {
 		return makeerror(err)
@@ -155,19 +155,19 @@ func (dbo DynamoOperator) CounterDelete(userId *UUID, groupId *UUID, counterId U
 	return dbo.dbi.commit(ops, counterId)
 }
 
-func (dbo DynamoOperator) GroupCreate(creator *UUID, name string) (Response, error) {
+func (dbo DynamoOperator) GroupCreate(s Session, name string) (Response, error) {
 	var ops []*dynamodb.TransactWriteItem
 	var err error
 
 	newid := MakeUUID()
 
-	ops, err = group_create(ops, &dbo.groupTable, newid, name)
+	ops, err = append_group_create(ops, &dbo.groupTable, newid, name)
 
 	if err != nil {
 		return makeerror(err)
 	}
 
-	ops, err = user_update(ops, &dbo.userTable, creator, uquery(usr_add_grp), newid)
+	ops, err = append_user_update(ops, &dbo.userTable, s.GetUserId(), uquery(usr_add_grp), newid)
 
 	if err != nil {
 		return makeerror(err)
@@ -176,10 +176,10 @@ func (dbo DynamoOperator) GroupCreate(creator *UUID, name string) (Response, err
 	return dbo.dbi.commit(ops, newid)
 }
 
-func (dbo DynamoOperator) GroupList(userId *UUID) (Response, error) {
+func (dbo DynamoOperator) GroupList(s Session) (Response, error) {
 	out, err := dbo.dbi.GetItem(&dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			userIdCol:     {S: aws.String(userId.String())},
+			userIdCol:     {S: s.GetUserIdString()},
 			objectTypeCol: {S: &dbo.userType},
 		},
 		TableName: &dbo.userTable,

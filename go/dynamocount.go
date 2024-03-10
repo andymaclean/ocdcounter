@@ -22,7 +22,7 @@ type CountData struct {
 	ObjectType   string `json:"objectType"`
 }
 
-func counter_create(ops []*dynamodb.TransactWriteItem, table *string, counterUUID UUID, counterName string, groupId *UUID) ([]*dynamodb.TransactWriteItem, error) {
+func append_counter_create(ops []*dynamodb.TransactWriteItem, table *string, counterUUID UUID, counterName string, groupId *UUID) ([]*dynamodb.TransactWriteItem, error) {
 	record, rerr := dynamodbattribute.MarshalMap(CountData{
 		CounterId:    counterUUID.String(),
 		ObjectType:   "Counter",
@@ -48,7 +48,7 @@ func counter_create(ops []*dynamodb.TransactWriteItem, table *string, counterUUI
 	return ops, nil
 }
 
-func counter_update(ops []*dynamodb.TransactWriteItem, table *string, groupId *UUID, counterId UUID, query string, stepval int) ([]*dynamodb.TransactWriteItem, error) {
+func append_counter_update(ops []*dynamodb.TransactWriteItem, table *string, groupId *UUID, counterId UUID, query string, stepval int) ([]*dynamodb.TransactWriteItem, error) {
 	udr := dynamodb.Update{
 		Key: map[string]*dynamodb.AttributeValue{
 			counterIdCol:  {S: aws.String(counterId.String())},
@@ -72,7 +72,7 @@ func counter_update(ops []*dynamodb.TransactWriteItem, table *string, groupId *U
 	return ops, nil
 }
 
-func counter_delete(ops []*dynamodb.TransactWriteItem, table *string, groupId *UUID, counterId UUID) ([]*dynamodb.TransactWriteItem, error) {
+func append_counter_delete(ops []*dynamodb.TransactWriteItem, table *string, groupId *UUID, counterId UUID) ([]*dynamodb.TransactWriteItem, error) {
 	dr := dynamodb.Delete{
 		Key: map[string]*dynamodb.AttributeValue{
 			counterIdCol:  {S: aws.String(counterId.String())},

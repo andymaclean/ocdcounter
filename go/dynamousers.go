@@ -15,7 +15,7 @@ type UserData struct {
 	ObjectType string   `dynamodbav:"objectType"`
 }
 
-func user_create(ops []*dynamodb.TransactWriteItem, table *string, userId UUID, userName *string) ([]*dynamodb.TransactWriteItem, error) {
+func append_user_create(ops []*dynamodb.TransactWriteItem, table *string, userId UUID, userName *string) ([]*dynamodb.TransactWriteItem, error) {
 	record, rerr := dynamodbattribute.MarshalMap(UserData{
 		UserId:     userId.String(),
 		UserName:   *userName,
@@ -38,7 +38,7 @@ func user_create(ops []*dynamodb.TransactWriteItem, table *string, userId UUID, 
 	return ops, nil
 }
 
-func user_update(ops []*dynamodb.TransactWriteItem, table *string, user *UUID, query string, val1 UUID) ([]*dynamodb.TransactWriteItem, error) {
+func append_user_update(ops []*dynamodb.TransactWriteItem, table *string, user *UUID, query string, val1 UUID) ([]*dynamodb.TransactWriteItem, error) {
 	udr := dynamodb.Update{
 		Key: map[string]*dynamodb.AttributeValue{
 			userIdCol:     {S: aws.String(user.String())},

@@ -125,7 +125,7 @@ func TestCounterCreate(t *testing.T) {
 
 	newid := MakeUUID()
 
-	ops, err = counter_create(ops, &expCounterTable, newid, expCounterName, &expGroup)
+	ops, err = append_counter_create(ops, &expCounterTable, newid, expCounterName, &expGroup)
 
 	checkError(t, err, nil)
 
@@ -193,7 +193,7 @@ func TestCounterUpdate(t *testing.T) {
 	var ops []*dynamodb.TransactWriteItem
 	var err error
 
-	ops, err = counter_update(ops, &expCounterTable, &expGroup, expCounterUUID, "hello world", 12345)
+	ops, err = append_counter_update(ops, &expCounterTable, &expGroup, expCounterUUID, "hello world", 12345)
 
 	checkError(t, err, nil)
 
@@ -242,7 +242,7 @@ func TestCounterDelete(t *testing.T) {
 
 	dc := MakeUUID()
 
-	ops, err = counter_delete(ops, &expCounterTable, &expGroup, dc)
+	ops, err = append_counter_delete(ops, &expCounterTable, &expGroup, dc)
 
 	checkError(t, err, nil)
 
@@ -299,7 +299,7 @@ func TestGroupCreate(t *testing.T) {
 	var ops []*dynamodb.TransactWriteItem
 	var err error
 
-	ops, err = group_create(ops, &expGroupTable, expGroup, expGroupName)
+	ops, err = append_group_create(ops, &expGroupTable, expGroup, expGroupName)
 
 	checkError(t, err, nil)
 
@@ -354,7 +354,7 @@ func TestGroupUpdate(t *testing.T) {
 
 	nuuid := MakeUUID()
 
-	ops, err = group_update(ops, &expGroupTable, &expGroup, "hello world", nuuid)
+	ops, err = append_group_update(ops, &expGroupTable, &expGroup, "hello world", nuuid)
 
 	checkError(t, err, nil)
 
@@ -410,7 +410,7 @@ func TestUserCreate(t *testing.T) {
 	var ops []*dynamodb.TransactWriteItem
 	var err error
 
-	ops, err = user_create(ops, &expUserTable, expUser, &expUserName)
+	ops, err = append_user_create(ops, &expUserTable, expUser, &expUserName)
 
 	checkError(t, err, nil)
 
@@ -465,7 +465,7 @@ func TestUserUpdate(t *testing.T) {
 
 	nuuid := MakeUUID()
 
-	ops, err = user_update(ops, &expUserTable, &expUser, "hello world", nuuid)
+	ops, err = append_user_update(ops, &expUserTable, &expUser, "hello world", nuuid)
 
 	checkError(t, err, nil)
 

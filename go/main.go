@@ -12,14 +12,12 @@ func unknownHandler() error {
 }
 
 func main() {
-	setTableNamesFromEnv()
-
 	api := APIHandler{
 		dbo: DynamoOperator{
-			counterTable:     os.Getenv("COUNTER_TABLE"),
-			groupTable:       os.Getenv("GROUP_TABLE"),
-			userTable:        os.Getenv("USER_TABLE"),
-			permissionsTable: os.Getenv("PERMISSIONS_TABLE"),
+			counterTable:    os.Getenv("COUNTER_TABLE"),
+			groupTable:      os.Getenv("GROUP_TABLE"),
+			userTable:       os.Getenv("USER_TABLE"),
+			permissionTable: os.Getenv("PERMISSION_TABLE"),
 
 			dbi: dynamodb_iface(),
 		},
