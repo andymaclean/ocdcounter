@@ -23,10 +23,13 @@ provider:
       Ref: dataTable
     USER_TABLE: 
       Ref: dataTable
+    PERMISSION_TABLE: 
+      Ref: permissionTable
     USER_POOL:
       Ref: UserPool
     USER_POOL_CLIENT:
       Ref: UserPoolClient
+    USER_EMAIL_LOOKUP: emailLookup
   iam:
     role:
       name:  counterTableRWAccess
@@ -59,88 +62,9 @@ package:
     - '!*'
     - 'bootstrap'
 
+## include auto-generated 'functions' block
 functions:
-  apipublic:
-    handler: apipublic
-    events:
-      - httpApi:
-          method: GET
-          path: /signup
-
-      - httpApi:
-          method: GET
-          path: /login
-
-  apiprivate:
-    handler: apiprivate
-    events:   
-      - httpApi:
-          method: GET
-          path: /loop
-          authorizer: APIAUTH
-
-      - httpApi:
-          method: GET
-          path: /loopua
-
-      - httpApi:
-          method: 'GET'
-          path: /api/v1/group
-          authorizer: APIAUTH
-
-      - httpApi:
-          method: 'POST'
-          path: /api/v1/group/{name}
-          authorizer: APIAUTH
-
-      - httpApi:
-          method: 'DELETE'
-          path: /api/v1/group/{id}
-          authorizer: APIAUTH
-
-      - httpApi:
-          method: 'GET'
-          path: /api/v1/group/{group}/counter
-          authorizer: APIAUTH
-
-      - httpApi:
-          method: 'GET'
-          path: /api/v1/group/{group}/counter/{id}
-          authorizer: APIAUTH
-
-      - httpApi:
-          method: 'POST'
-          path: /api/v1/group/{group}/counter/{name}
-          authorizer: APIAUTH
-
-      - httpApi:
-          method: 'POST'
-          path: /api/v1/group/{group}/counter/{id}/increment
-          authorizer: APIAUTH
-
-      - httpApi:
-          method: 'POST'
-          path: /api/v1/group/{group}/counter/{id}/decrement
-          authorizer: APIAUTH
-
-      - httpApi:
-          method: 'POST'
-          path: /api/v1/group/{group}/counter/{id}/reset
-          authorizer: APIAUTH
-
-      - httpApi:
-          method: 'POST'
-          path: /api/v1/group/{group}/counter/{id}/step
-          authorizer: APIAUTH
-
-      - httpApi:
-          method: 'DELETE'
-          path: /api/v1/group/{group}/counter/{id}
-          authorizer: APIAUTH
-
-
-
-
+  - ${file(serverless/sls_api_handlers.yaml)}
 
 resources:
   Resources:

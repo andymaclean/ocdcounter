@@ -12,6 +12,10 @@ type APISession struct {
 }
 
 func Create_APISession(dbo DataOperator, req Request) (APISession, error) {
+	if req.RequestContext.Authorizer == nil {
+		return APISession{}, fmt.Errorf("username is not in JWT claims")
+	}
+
 	email, hasemail := req.RequestContext.Authorizer.JWT.Claims["cognito:username"]
 
 	if !hasemail {
@@ -48,7 +52,7 @@ func (s APISession) GetUserId() *UUID {
 	return &s.userId
 }
 
-func (s APISession) GetUserIdString() *string {
+func (s *APISession) GetUserIdString() *string {
 	if s.userIdString == nil {
 		st := s.userId.String()
 		s.userIdString = &st
@@ -60,7 +64,7 @@ func (s APISession) GetGroupId() *UUID {
 	return &s.groupId
 }
 
-func (s APISession) GetGroupIdString() *string {
+func (s *APISession) GetGroupIdString() *string {
 	if s.groupIdString == nil {
 		st := s.groupId.String()
 		s.groupIdString = &st

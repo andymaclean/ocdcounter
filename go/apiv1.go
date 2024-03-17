@@ -89,11 +89,6 @@ func loop(ctx context.Context, req Request, dbo DataOperator, s Session) (Respon
 	return makeresponse(req)
 }
 
-var public_handlers = map[string]func(ctx context.Context, req Request, dbo DataOperator) (Response, error){
-	"GET /login":  login,
-	"GET /signup": signup,
-}
-
 type APIHandler struct {
 	dbo DataOperator
 }
@@ -106,23 +101,6 @@ func (api APIHandler) public_handler_gatewayv2(ctx context.Context, req Request)
 	}
 
 	return f(ctx, req, api.dbo)
-}
-
-var private_handlers = map[string]func(ctx context.Context, req Request, dbo DataOperator, s Session) (Response, error){
-	"GET /loop":                 loop,
-	"GET /loopua":               loop,
-	"GET /api/v1/group":         listGroups,
-	"POST /api/v1/group/{name}": createGroup,
-	"DELETE /api/v1/group/{id}": deleteGroup,
-
-	"GET /api/v1/group/{group}/counter":                 listCounters,
-	"GET /api/v1/group/{group}/counter/{id}":            getCounter,
-	"POST /api/v1/group/{group}/counter/{name}":         createCounter,
-	"POST /api/v1/group/{group}/counter/{id}/increment": incCounter,
-	"POST /api/v1/group/{group}/counter/{id}/decrement": decCounter,
-	"POST /api/v1/group/{group}/counter/{id}/reset":     resetCounter,
-	"POST /api/v1/group/{group}/counter/{id}/step":      setCounterStep,
-	"DELETE /api/v1/group/{group}/counter/{id}":         deleteCounter,
 }
 
 func (api APIHandler) private_handler_gatewayv2(ctx context.Context, req Request) (Response, error) {
@@ -141,5 +119,5 @@ func (api APIHandler) private_handler_gatewayv2(ctx context.Context, req Request
 		return makeerror(serr)
 	}
 
-	return f(ctx, req, api.dbo, session)
+	return f(ctx, req, api.dbo, &session)
 }

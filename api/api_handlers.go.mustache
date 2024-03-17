@@ -1,0 +1,19 @@
+package main
+
+import (
+	"context"
+)
+
+// THIS IS AN AUTO GENERATED FILE.  DO NOT MANUALLY EDIT IT
+
+var public_handlers = map[string]func(ctx context.Context, req Request, dbo DataOperator) (Response, error){
+{{#public_endpoints.endpoints}}
+  "{{method}} {{path}}":     {{endpoint}},
+{{/public_endpoints.endpoints}}
+}
+
+var private_handlers = map[string]func(ctx context.Context, req Request, dbo DataOperator, s Session) (Response, error){
+{{#private_endpoints.endpoints}}
+  "{{method}} {{path}}":     {{endpoint}},
+{{/private_endpoints.endpoints}}
+}

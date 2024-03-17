@@ -15,18 +15,42 @@ type opResult struct {
 }
 
 type DynamoOperator struct {
-	groupTable      string `default:"group"`
-	userTable       string `default:"user"`
-	counterTable    string `default:"counter"`
-	permissionTable string `default:"permission"`
-	userEmailIndex  string `default:"userEmailIndex"`
+	groupTable      string
+	userTable       string
+	counterTable    string
+	permissionTable string
+	userEmailIndex  string
 
 	dbi DBInterface
 
 	// put these here for ease of address-taking.
-	counterType string `default:"counter"`
-	userType    string `default:"user"`
-	groupType   string `default:"group"`
+	counterType string
+	userType    string
+	groupType   string
+}
+
+func commit(dbi DBInterface, ops []*dynamodb.TransactWriteItem, id UUID) (Response, error) {
+	input := dynamodb.TransactWriteItemsInput{
+		TransactItems: ops,
+	}
+
+	_, err := dbi.TransactWriteItems(&input)
+
+	if err != nil {
+		return makeerror(err)
+	}
+
+	return makeresponse(opResult{Success: true, Result: "OK", Id: id.String()})
+}
+
+func inline_commit(dbi DBInterface, ops []*dynamodb.TransactWriteItem) error {
+	input := dynamodb.TransactWriteItemsInput{
+		TransactItems: ops,
+	}
+
+	_, err := dbi.TransactWriteItems(&input)
+
+	return err
 }
 
 func (dbo DynamoOperator) LookupUserUUID(email *string) (UUID, error) {
@@ -112,7 +136,7 @@ func (dbo DynamoOperator) CounterUpdate(s Session, id UUID, query string, stepVa
 		return makeerror(err)
 	}
 
-	return dbo.dbi.commit(ops, id)
+	return commit(dbo.dbi, ops, id)
 }
 
 func (dbo DynamoOperator) CounterCreate(s Session, name string) (Response, error) {
@@ -133,7 +157,7 @@ func (dbo DynamoOperator) CounterCreate(s Session, name string) (Response, error
 		return makeerror(err)
 	}
 
-	return dbo.dbi.commit(ops, newid)
+	return commit(dbo.dbi, ops, newid)
 }
 
 func (dbo DynamoOperator) CounterDelete(s Session, counterId UUID) (Response, error) {
@@ -152,7 +176,7 @@ func (dbo DynamoOperator) CounterDelete(s Session, counterId UUID) (Response, er
 		return makeerror(err)
 	}
 
-	return dbo.dbi.commit(ops, counterId)
+	return commit(dbo.dbi, ops, counterId)
 }
 
 func (dbo DynamoOperator) GroupCreate(s Session, name string) (Response, error) {
@@ -173,7 +197,7 @@ func (dbo DynamoOperator) GroupCreate(s Session, name string) (Response, error) 
 		return makeerror(err)
 	}
 
-	return dbo.dbi.commit(ops, newid)
+	return commit(dbo.dbi, ops, newid)
 }
 
 func (dbo DynamoOperator) GroupList(s Session) (Response, error) {
@@ -210,5 +234,5 @@ func (dbo DynamoOperator) UserCreate(newUserId UUID, name *string) error {
 		return err
 	}
 
-	return dbo.dbi.inline_commit(ops)
+	return inline_commit(dbo.dbi, ops)
 }

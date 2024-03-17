@@ -1,0 +1,18 @@
+apipublic:
+    handler: {{public_endpoints.handler}}
+    events:
+      {{#public_endpoints.endpoints}}
+      - httpApi:
+          method: {{method}}
+          path: {{path}}
+      {{/public_endpoints.endpoints}}
+
+apiprivate:
+    handler: {{private_endpoints.handler}}
+    events:
+      {{#private_endpoints.endpoints}}
+      - httpApi:
+          method: {{method}}
+          path: {{path}}
+          authorizer: {{private_endpoints.authorizer}}
+      {{/private_endpoints.endpoints}}

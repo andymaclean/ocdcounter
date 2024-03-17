@@ -2,4 +2,6 @@
 bootstrap
 venom.*
 out
-
+serverless/sls_api_handlers.yaml
+go/api_handlers.go
+go/api_handlers_test.go

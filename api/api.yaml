@@ -1,0 +1,64 @@
+public_endpoints:
+  handler: apipublic
+  endpoints:
+  - endpoint: login
+    method: GET
+    path: /login
+  - endpoint: signup
+    method: GET
+    path: /signup
+
+private_endpoints:
+  handler: apiprivate
+  authorizer:  APIAUTH
+  endpoints:
+  - endpoint: loop
+    method: GET
+    path: /loop
+  - endpoint: loop
+    method: GET
+    path: /loopua
+    no_authorizer: true  ## this is to test that the lambda correctly rejects an unauthorized request
+
+    ## endpoints for group manupulation
+  - endpoint: listGroups
+    method: GET
+    path: /api/v1/group
+  - endpoint: createGroup
+    method: POST
+    path: /api/v1/group/{name}
+  - endpoint: deleteGroup
+    method: DELETE
+    path: /api/v1/group/{id}
+
+    ## counter information endpoints
+  - endpoint: listCounters
+    method: GET
+    path: /api/v1/group/{group}/counter
+  - endpoint: getCounter
+    method: GET
+    path: /api/v1/group/{group}/counter/{id}
+  - endpoint: createCounter
+    method: POST
+    path: /api/v1/group/{group}/counter/{name}
+
+    ## counter operation endpoints
+  - endpoint: incCounter
+    method: POST
+    path: /api/v1/group/{group}/counter/{id}/increment
+  - endpoint: decCounter
+    method: POST
+    path: /api/v1/group/{group}/counter/{id}/decrement
+  - endpoint: resetCounter
+    method: POST
+    path: /api/v1/group/{group}/counter/{id}/reset
+
+    ## counter admin endpoints
+  - endpoint: setCounterStep
+    method: POST
+    path: /api/v1/group/{group}/counter/{id}/step
+  - endpoint: deleteCounter
+    method: DELETE
+    path: /api/v1/group/{group}/counter/{id}
+
+

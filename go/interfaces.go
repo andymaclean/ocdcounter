@@ -41,8 +41,7 @@ type DataOperator interface {
 // DBInterface is the low level interface which actually talks to DynamoDB.
 // Separated so I can mock out things for testing.
 type DBInterface interface {
-	commit(ops []*dynamodb.TransactWriteItem, id UUID) (Response, error)
-	inline_commit(ops []*dynamodb.TransactWriteItem) error
+	TransactWriteItems(*dynamodb.TransactWriteItemsInput) (*dynamodb.TransactWriteItemsOutput, error)
 	GetItem(*dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error)
 	Query(*dynamodb.QueryInput) (*dynamodb.QueryOutput, error)
 }

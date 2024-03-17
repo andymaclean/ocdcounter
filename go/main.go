@@ -18,8 +18,13 @@ func main() {
 			groupTable:      os.Getenv("GROUP_TABLE"),
 			userTable:       os.Getenv("USER_TABLE"),
 			permissionTable: os.Getenv("PERMISSION_TABLE"),
+			userEmailIndex:  os.Getenv("USER_EMAIL_LOOKUP"),
 
-			dbi: dynamodb_iface(),
+			dbi: Create_DynamoDBInterface(),
+
+			counterType: "Counter",
+			userType:    "User",
+			groupType:   "Group",
 		},
 	}
 
