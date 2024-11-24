@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -67,12 +68,13 @@ func TestDBOGroupCreate(t *testing.T) {
 }
 
 func TestDBOGroupList(t *testing.T) {
+	var expEmail = "foo@bar.com"
 	s, dbo, dbi := mockEnv(MakeUUID(), MakeUUID(), expEmail)
 
 	group1 := MakeUUID()
 	group2 := MakeUUID()
 
-	udm, err := dynamodbattribute.Marshal(UserData{
+	udm, err := dynamodbattribute.MarshalMap(UserData{
 		UserId:   s.GetUserId().String(),
 		UserName: "MrSmith",
 		Groups:   []string{group1.String(), group2.String()},
@@ -88,8 +90,70 @@ func TestDBOGroupList(t *testing.T) {
 
 	resp, err := dbo.GroupList(s)
 
-	if err != nil {
-		t.Errorf("Group list error %s", err)
+	checkError(t, err, nil)
+
+	var r opResult
+
+	umerr := json.Unmarshal([]byte(resp.Body), &r)
+
+	checkError(t, umerr, nil)
+
+	if r.Id != s.GetUserId().String() {
+		t.Errorf("Expected id %s, got %s", s.GetUserId().String(), r.Id)
 	}
 
+	if r.Result != "OK" || r.Success != true {
+		t.Errorf("Unexpected list result %s, success %t", r.Result, r.Success)
+	}
+
+	if len(r.Items) != 2 || r.Items[0] != group1.String() || r.Items[1] != group2.String() {
+		t.Errorf("Group list is incorrect:  %s", r.Items)
+	}
+}
+
+func TestDBOCounterList(t *testing.T) {
+	var expEmail = "foo@bar.com"
+	s, dbo, dbi := mockEnv(MakeUUID(), MakeUUID(), expEmail)
+
+	group := MakeUUID()
+
+	counter1 := MakeUUID()
+	counter2 := MakeUUID()
+
+	udm, err := dynamodbattribute.MarshalMap(GroupData{
+		GroupId:    group.String(),
+		GroupName:  "MrSmithGroup",
+		ObjectType: "Group",
+		Counters:   []string{counter1.String(), counter2.String()},
+	})
+
+	if err != nil {
+		panic("oops")
+	}
+
+	dbi.gio = dynamodb.GetItemOutput{
+		Item: udm,
+	}
+
+	resp, err := dbo.CounterList(s)
+
+	checkError(t, err, nil)
+
+	var r opResult
+
+	umerr := json.Unmarshal([]byte(resp.Body), &r)
+
+	checkError(t, umerr, nil)
+
+	if r.Id != group.String() {
+		t.Errorf("Expected id %s, got %s", group.String(), r.Id)
+	}
+
+	if r.Result != "OK" || r.Success != true {
+		t.Errorf("Unexpected list result %s, success %t", r.Result, r.Success)
+	}
+
+	if len(r.Items) != 2 || r.Items[0] != counter1.String() || r.Items[1] != counter2.String() {
+		t.Errorf("Counter list is incorrect:  %s", r.Items)
+	}
 }

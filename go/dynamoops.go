@@ -12,6 +12,7 @@ type opResult struct {
 	Success bool
 	Result  string
 	Id      string
+	Items   []string `json:"omitempty"`
 }
 
 type DynamoOperator struct {
@@ -123,7 +124,12 @@ func (dbo DynamoOperator) CounterList(s Session) (Response, error) {
 		return makeerror(gderr)
 	}
 
-	return makeresponse(map[string][]string{"Counters": gd.Counters})
+	return makeresponse(opResult{
+		Success: true,
+		Result:  "OK",
+		Id:      gd.GroupId,
+		Items:   gd.Counters,
+	})
 }
 
 func (dbo DynamoOperator) CounterUpdate(s Session, id UUID, query string, stepVal int) (Response, error) {
@@ -221,7 +227,12 @@ func (dbo DynamoOperator) GroupList(s Session) (Response, error) {
 		return makeerror(gderr)
 	}
 
-	return makeresponse(map[string][]string{"Groups": ud.Groups})
+	return makeresponse(opResult{
+		Success: true,
+		Result:  "OK",
+		Id:      ud.UserId,
+		Items:   ud.Groups,
+	})
 }
 
 func (dbo DynamoOperator) UserCreate(newUserId UUID, name *string) error {

@@ -30,7 +30,7 @@ testcases:
       Authorization: {{.token}}
     assertions:
     - result.statuscode ShouldEqual 200
-    - result.bodyjson.Groups ShouldContain {{.group.id}}
+    - result.bodyjson.Items ShouldContain {{.group.id}}
 
 
 
@@ -59,7 +59,7 @@ testcases:
       Authorization: {{.token}}
     assertions:
     - result.statuscode ShouldEqual 200
-    - result.bodyjson.Counters.Counters0 ShouldEqual {{.create.id}}
+    - result.bodyjson.Items.Items0 ShouldEqual {{.create.id}}
 
 - name: Reset a counter
   steps:
@@ -290,5 +290,5 @@ testcases:
       Authorization: {{.token}}
     assertions:
     - result.statuscode ShouldEqual 200
-    - result.bodyjson.Counters.Counters0 ShouldBeEmpty
+    - result.bodyjson.Items.Items0 ShouldBeEmpty
 

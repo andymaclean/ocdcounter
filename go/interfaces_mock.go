@@ -23,7 +23,7 @@ func (mo *MockDataOperator) LookupUserUUID(email *string) (UUID, error) {
 		mo.funcName = append(mo.funcName, "LookupUserUUID")
 		return mo.userId, mo.retErr
 	} else {
-		return NullUUID(), fmt.Errorf("Wrong email:  %s not %s", *email, mo.expEmail)
+		return NullUUID(), fmt.Errorf("wrong email:  %s not %s", *email, mo.expEmail)
 	}
 }
 
@@ -60,7 +60,12 @@ func (mo *MockDataOperator) CounterList(s Session) (Response, error) {
 	if mo.retErr != nil {
 		return makeerror(mo.retErr)
 	}
-	return makeresponse(map[string][]string{"Counters": []string{mo.newId.String()}})
+	return makeresponse(opResult{
+		Result:  "OK",
+		Success: true,
+		Id:      "?",
+		Items:   []string{mo.newId.String()},
+	})
 }
 func (mo *MockDataOperator) CounterDelete(s Session, counterId UUID) (Response, error) {
 	mo.funcName = append(mo.funcName, "CounterDelete")
@@ -83,7 +88,12 @@ func (mo *MockDataOperator) GroupList(s Session) (Response, error) {
 	if mo.retErr != nil {
 		return makeerror(mo.retErr)
 	}
-	return makeresponse(map[string][]string{"Counters": []string{mo.newId.String()}})
+	return makeresponse(opResult{
+		Result:  "OK",
+		Success: true,
+		Id:      "?",
+		Items:   []string{mo.newId.String()},
+	})
 }
 
 type MockDBInterface struct {
